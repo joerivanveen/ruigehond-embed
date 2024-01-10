@@ -46,11 +46,7 @@ function ruigehond015_run() {
 	if ( 0 === strpos( $url, 'ruigehond_embed/' ) ) {
 		$url = str_replace( 'ruigehond_embed/', '', $url );
 		if ( true === isset( $vars['titles'][ $url ] ) ) {
-			$url = $vars['titles'][ $url ];
-			if ( 0 !== strpos( $url, '/' ) ) {
-				$url = "/$url";
-			}
-			wp_redirect( $url, 307, 'Ruigehond-embed' );
+			wp_redirect( $vars['titles'][ $url ], 307, 'Ruigehond-embed' );
 			die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
 		}
 	} elseif ( true === isset( $vars['embeds'][ $url ] ) ) {
@@ -60,10 +56,12 @@ function ruigehond015_run() {
 		// todo if array, check if request url is in array, if not, allow
 		add_action( 'send_headers', function () { // frontend
 			//header( 'X-Frame-Options: ALLOW-FROM obsolete' );
+			header( 'X-Ruigehond-embed: Yo!' );
 			header_remove( 'X-Frame-Options' );
 		}, 99 );
 		add_action( 'admin_init', function () { // admin
 			//header( 'X-Frame-Options: ALLOW-FROM obsolete' );
+			header( 'X-Ruigehond-embed: Yo!' );
 			header_remove( 'X-Frame-Options' );
 		}, 99 );
 	}
@@ -120,7 +118,7 @@ function ruigehond015_settings() {
 	$host         = site_url();
 	$explanations = array(
 		'title' => sprintf( __( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
-		'embed' => __( 'Local uri that will be embedded.', 'ruigehond-embed' ),
+		'embed' => __( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
 		'allow' => __( 'Embedding only allowed from these referers. Leave empty to allow from all.', 'ruigehond-embed' ) . ' <strong>NOT WORKING YET</strong>',
 	);
 
@@ -200,12 +198,19 @@ function ruigehond015_settings_validate( $input ) {
 			return $old_vars;
 		}
 
-		if ( '' === $title ) {
-			unset( $vars['titles'][ $title ] );
-			unset( $vars['embeds'][ $embed ] );
-		} else {
+		if ( '' !== $title ) {
+			$embed = $findr = trim( $embed, '/' );
+			if ( 0 === strpos( $embed, 'https://' )
+			     || 0 === strpos( $embed, 'http://' )
+			     || 0 === strpos( $embed, '//' )
+			) {
+				$parts = explode( '/', $embed );
+				$findr = implode( '/', array_slice( $parts, 3 ) );
+			} else {
+				$embed = "/$embed";
+			}
 			$vars['titles'][ $title ] = $embed;
-			$vars['embeds'][ $embed ] = $allow;
+			$vars['embeds'][ $findr ] = $allow;
 		}
 	}
 
