@@ -13,8 +13,9 @@ defined( 'ABSPATH' ) || die();
 const RUIGEHOND015_VERSION = '0.0.1';
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
+register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
 //
-function ruigehond015_run() {
+function ruigehond015_run(): void {
 	if ( is_admin() ) {
 		load_plugin_textdomain( 'ruigehond-embed', null, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		add_action( 'admin_init', 'ruigehond015_settings' );
@@ -56,7 +57,7 @@ function ruigehond015_run() {
 	}
 }
 
-function ruigehond015_settingspage() {
+function ruigehond015_settingspage(): void {
 	if ( ! current_user_can( 'administrator' ) ) {
 		return;
 	}
@@ -72,7 +73,7 @@ function ruigehond015_settingspage() {
 	echo '</form></div>';
 }
 
-function ruigehond015_settings() {
+function ruigehond015_settings(): void {
 	/**
 	 * register a new setting, call this function for each setting
 	 * Arguments: (Array)
@@ -124,7 +125,7 @@ function ruigehond015_settings() {
 	ruigehond015_add_settings_field( 'title', 0, '', $explanations );
 }
 
-function ruigehond015_add_settings_field( $name, $index, $value, $explanations ) {
+function ruigehond015_add_settings_field( $name, $index, $value, $explanations ): void {
 	add_settings_field(
 		"ruigehond015_{$name}_$index",
 		$name,
@@ -164,7 +165,7 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 	);
 }
 
-function ruigehond015_settings_validate( $input ) {
+function ruigehond015_settings_validate( $input ): array {
 	$vars           = $old_vars = (array) get_option( 'ruigehond015' );
 	$vars['titles'] = array();
 	$vars['embeds'] = array();
@@ -206,7 +207,7 @@ function ruigehond015_settings_validate( $input ) {
 	return $vars;
 }
 
-function ruigehond015_settingslink( $links ) {
+function ruigehond015_settingslink( $links ): array {
 	$url           = get_admin_url();
 	$link_text     = __( 'Settings', 'ruigehond-embed' );
 	$settings_link = "<a href=\"{$url}options-general.php?page=ruigehond-embed\">$link_text</a>";
@@ -215,7 +216,7 @@ function ruigehond015_settingslink( $links ) {
 	return $links;
 }
 
-function ruigehond015_menuitem() {
+function ruigehond015_menuitem(): void {
 	add_options_page(
 		'Ruigehond embed',
 		'Ruigehond embed',
@@ -223,4 +224,8 @@ function ruigehond015_menuitem() {
 		'ruigehond-embed',
 		'ruigehond015_settingspage'
 	);
+}
+
+function ruigehond015_uninstall(): void {
+	delete_option( 'ruigehond015' );
 }
