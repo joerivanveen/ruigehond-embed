@@ -23,19 +23,8 @@ function ruigehond015_run() {
 
 		return;
 	}
+
 	$vars = get_option( 'ruigehond015' );
-//	$vars = array(
-//		// redirect to keep changing slugs central
-//		'titles' => array(
-//			'goochel' => 'wp-admin/options-reading.php',
-//			'giechel' => 'prut/'
-//		),
-//		// x-frame-options...
-//		'embeds' => array(
-//			'wp-admin/admin-ajax.php' => array(),
-//			'prut'                    => array(),
-//		),
-//	);
 
 	if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
 		return;
@@ -98,9 +87,9 @@ function ruigehond015_settings() {
 		__( 'Set your options', 'ruigehond-embed' ), // title
 		function () {
 			echo '<p>';
-			echo __( 'To add an entry, fill in the title at the bottom of the form.', 'ruigehond-embed' );
+			echo esc_html__( 'To add an entry, fill in the title at the bottom of the form.', 'ruigehond-embed' );
 			echo '<br/>';
-			echo __( 'To remove an entry, empty its title field and hit save.', 'ruigehond-embed' );
+			echo esc_html__( 'To remove an entry, empty its title field and hit save.', 'ruigehond-embed' );
 			echo '</p>';
 		}, //callback
 		'ruigehond015' // page
@@ -117,9 +106,9 @@ function ruigehond015_settings() {
 
 	$host         = site_url();
 	$explanations = array(
-		'title' => sprintf( __( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
-		'embed' => __( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
-		'allow' => __( 'Embedding only allowed from these referers. Leave empty to allow from all.', 'ruigehond-embed' ) . ' <strong>NOT WORKING YET</strong>',
+		'title' => sprintf( esc_html__( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
+		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
+		'allow' => esc_html__( 'Embedding only allowed from these referrers. Leave empty to allow from all.', 'ruigehond-embed' ) . ' <strong>NOT WORKING YET</strong>',
 	);
 
 	foreach ( $titles as $title => $embed ) {
@@ -199,18 +188,18 @@ function ruigehond015_settings_validate( $input ) {
 		}
 
 		if ( '' !== $title ) {
-			$embed = $findr = trim( $embed, '/' );
+			$embed = $keyed = trim( $embed, '/' );
 			if ( 0 === strpos( $embed, 'https://' )
 			     || 0 === strpos( $embed, 'http://' )
 			     || 0 === strpos( $embed, '//' )
 			) {
 				$parts = explode( '/', $embed );
-				$findr = implode( '/', array_slice( $parts, 3 ) );
+				$keyed = implode( '/', array_slice( $parts, 3 ) );
 			} else {
 				$embed = "/$embed";
 			}
 			$vars['titles'][ $title ] = $embed;
-			$vars['embeds'][ $findr ] = $allow;
+			$vars['embeds'][ $keyed ] = $allow;
 		}
 	}
 
