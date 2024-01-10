@@ -41,19 +41,23 @@ function ruigehond015_run(): void {
 		}
 	} elseif ( true === isset( $vars['embeds'][ $url ] ) ) {
 		$allow   = $vars['embeds'][ $url ];
-		$referer = $_SERVER['HTTP_REFERER'];
+		$referer = $_SERVER['HTTP_REFERER'] ?? null;
 		// todo what about Content Security Policy frame ancestors?
 		// todo if array, check if request url is in array, if not, allow
 		add_action( 'send_headers', function () { // frontend
-			//header( 'X-Frame-Options: ALLOW-FROM obsolete' );
-			header( 'X-Ruigehond-embed: Yo!' );
+			header( 'X-Ruigehond-Embed: removed X-Frame-Options if possible' );
 			header_remove( 'X-Frame-Options' );
 		}, 99 );
 		add_action( 'admin_init', function () { // admin
-			//header( 'X-Frame-Options: ALLOW-FROM obsolete' );
-			header( 'X-Ruigehond-embed: Yo!' );
+			header( 'X-Ruigehond-Embed: removed X-Frame-Options if possible' );
 			header_remove( 'X-Frame-Options' );
 		}, 99 );
+	} else {
+		if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
+			header( 'X-Frame-Options: DENY' );
+		} else {
+			header( 'X-Frame-Options: SAMEORIGIN' );
+		}
 	}
 }
 
@@ -90,7 +94,9 @@ function ruigehond015_settings(): void {
 			echo '<p>';
 			echo esc_html__( 'To add an entry, fill in the title at the bottom of the form.', 'ruigehond-embed' );
 			echo '<br/>';
-			echo esc_html__( 'To remove an entry, empty its title field and hit save.', 'ruigehond-embed' );
+			echo esc_html__( 'To remove an entry, empty its title field.', 'ruigehond-embed' );
+			echo '<br/>';
+			echo esc_html__( 'Remember to hit ‘Save Settings’.', 'ruigehond-embed' );
 			echo '</p>';
 		}, //callback
 		'ruigehond015' // page
@@ -110,7 +116,10 @@ function ruigehond015_settings(): void {
 		'title' => sprintf( esc_html__( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
 		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
 		'allow' => esc_html__( 'Embedding only allowed from these referrers. Leave empty to allow from all.', 'ruigehond-embed' ) . ' <strong>NOT WORKING YET</strong>',
+		'xfram' => sprintf(esc_html__('%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed'), 'X-Frame-Options', 'DENY', 'SAMEORIGIN'),
 	);
+
+	ruigehond015_add_settings_field( 'xfram', 0, $vars['xframe'] ?? '', $explanations );
 
 	foreach ( $titles as $title => $embed ) {
 		ruigehond015_add_settings_field( 'title', $index, (string) $title, $explanations );
@@ -169,6 +178,11 @@ function ruigehond015_settings_validate( $input ): array {
 	$vars           = $old_vars = (array) get_option( 'ruigehond015' );
 	$vars['titles'] = array();
 	$vars['embeds'] = array();
+	$vars['xframe'] = 'SAMEORIGIN';
+
+		if ( 'DENY' === $input['xfram'][0] ) {
+		$vars['xframe'] = 'DENY';
+	}
 
 	$titles = $input['title'] ?? array();
 	$embeds = $input['embed'] ?? array();
@@ -189,7 +203,7 @@ function ruigehond015_settings_validate( $input ): array {
 		}
 
 		if ( '' !== $title ) {
-			$embed = $keyed = isset($embed) ? trim( $embed, '/' ) : '';
+			$embed = $keyed = isset( $embed ) ? trim( $embed, '/' ) : '';
 			if ( 0 === strpos( $embed, 'https://' )
 			     || 0 === strpos( $embed, 'http://' )
 			     || 0 === strpos( $embed, '//' )
