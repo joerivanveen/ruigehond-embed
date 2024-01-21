@@ -39,11 +39,12 @@ function ruigehond015_run(): void {
 			wp_redirect( $vars['titles'][ $url ], 307, 'Ruigehond-embed' );
 			die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
 		}
-	} elseif ( true === isset( $vars['embeds'][ $url ] ) ) {
-		$allow   = $vars['embeds'][ $url ];
-		$referer = $_SERVER['HTTP_REFERER'] ?? null;
+	} elseif ( true === isset( $vars['embeds'][ $url ] )
+	           && true === isset( $_SERVER['HTTP_REFERER'] )
+	           && true === is_array( $allow = $vars['embeds'][ $url ] )
+	           && ( $referer = $_SERVER['HTTP_REFERER'] ) && true === in_array( $referer, $allow )
+	) {
 		// todo what about Content Security Policy frame ancestors?
-		// todo if array, check if request url is in array, if not, allow
 		add_action( 'send_headers', function () { // frontend
 			header( 'X-Ruigehond-Embed: removed X-Frame-Options if possible' );
 			header_remove( 'X-Frame-Options' );
@@ -65,15 +66,13 @@ function ruigehond015_settingspage(): void {
 	if ( ! current_user_can( 'administrator' ) ) {
 		return;
 	}
-	echo '<div class="wrap"><h1>';
-	echo esc_html( get_admin_page_title() );
-	echo '</h1><form action="options.php" method="post">';
+	echo '<div class="wrap"><h1>Ruigehond embed</h1><form action="options.php" method="post">';
 	// output security fields for the registered setting
 	settings_fields( 'ruigehond015' );
 	// output setting sections and their fields
 	do_settings_sections( 'ruigehond015' );
 	// output save settings button
-	submit_button( __( 'Save Settings', 'wp-reading-progress' ) );
+	submit_button( __( 'Save Settings', 'ruigehond-embed' ) );
 	echo '</form></div>';
 }
 
@@ -115,8 +114,8 @@ function ruigehond015_settings(): void {
 	$explanations = array(
 		'title' => sprintf( esc_html__( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
 		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
-		'allow' => esc_html__( 'Embedding only allowed from these referrers. Leave empty to allow from all.', 'ruigehond-embed' ) . ' <strong>NOT WORKING YET</strong>',
-		'xfram' => sprintf(esc_html__('%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed'), 'X-Frame-Options', 'DENY', 'SAMEORIGIN'),
+		'allow' => esc_html__( 'Mandatory list of referrers that may embed.', 'ruigehond-embed' ),
+		'xfram' => sprintf( esc_html__( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
 	);
 
 	ruigehond015_add_settings_field( 'xfram', 0, $vars['xframe'] ?? '', $explanations );
@@ -124,8 +123,20 @@ function ruigehond015_settings(): void {
 	foreach ( $titles as $title => $embed ) {
 		ruigehond015_add_settings_field( 'title', $index, (string) $title, $explanations );
 		ruigehond015_add_settings_field( 'embed', $index, (string) $embed, $explanations );
-		if ( true === isset( $embeds[ $embed ] ) ) {
-			ruigehond015_add_settings_field( 'allow', $index, (array) $embeds[ $embed ], $explanations );
+		if ( 0 === strpos( $embed, 'https://' )
+		     || 0 === strpos( $embed, 'http://' )
+		     || 0 === strpos( $embed, '//' )
+		) {
+			$parts = explode( '/', $embed );
+			$keyed = implode( '/', array_slice( $parts, 3 ) );
+		} else {
+			$keyed = $embed;
+		}
+		if ( true === isset( $embeds[ $keyed ] ) ) {
+			if ( is_array( $embeds[ $keyed ] ) ) {
+				ruigehond015_add_settings_field( 'allow', $index, $embeds[ $keyed ], $explanations );
+				$embeds[ $keyed ] = false; // prevent a second textarea with the same values
+			}
 		} else {
 			ruigehond015_add_settings_field( 'allow', $index, array(), $explanations );
 		}
@@ -180,7 +191,7 @@ function ruigehond015_settings_validate( $input ): array {
 	$vars['embeds'] = array();
 	$vars['xframe'] = 'SAMEORIGIN';
 
-		if ( 'DENY' === $input['xfram'][0] ) {
+	if ( 'DENY' === $input['xfram'][0] ) {
 		$vars['xframe'] = 'DENY';
 	}
 
@@ -214,7 +225,17 @@ function ruigehond015_settings_validate( $input ): array {
 				$embed = "/$embed";
 			}
 			$vars['titles'][ $title ] = $embed;
-			$vars['embeds'][ $keyed ] = $allow;
+
+			if (null === $allow) continue; // when there are duplicate keys / referrers
+			$allow = explode( PHP_EOL, $allow );
+			$valid = $vars['embeds'][ $keyed ] ?? array();
+			foreach ( $allow as $index => $referrer ) {
+				$referrer = trim( $referrer ); // no whitespaces...
+				if ( $referrer && false === in_array( $referrer, $valid ) ) {
+					$valid[] = $referrer; // todo more validating?
+				}
+			}
+			$vars['embeds'][ $keyed ] = $valid;
 		}
 	}
 
