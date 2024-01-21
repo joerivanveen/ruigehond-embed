@@ -219,7 +219,7 @@ function ruigehond015_settings_validate( $input ): array {
 			add_settings_error(
 				'ruigehond_embed',
 				"ruigehond_embed_$index",
-				sprintf( __( 'Duplicate titles not allowed: %s', 'ruigehond-embed' ), $title )
+				sprintf( esc_html__( 'Duplicate titles not allowed: %s', 'ruigehond-embed' ), $title )
 			);
 
 			return $old_vars;
