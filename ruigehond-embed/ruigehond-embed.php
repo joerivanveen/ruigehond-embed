@@ -226,6 +226,7 @@ function ruigehond015_settings_validate( $input ): array {
 		}
 
 		if ( '' !== $title ) {
+			$title = sanitize_title($title);
 			$embed = $keyed = isset( $embed ) ? trim( $embed, '/' ) : '';
 			if ( 0 === strpos( $embed, 'https://' )
 			     || 0 === strpos( $embed, 'http://' )
