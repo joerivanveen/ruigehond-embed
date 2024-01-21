@@ -16,6 +16,12 @@ add_action( 'init', 'ruigehond015_run' );
 register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
 //
 function ruigehond015_run(): void {
+	if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
+		header( 'X-Frame-Options: DENY' );
+	} else {
+		header( 'X-Frame-Options: SAMEORIGIN' );
+	}
+
 	if ( is_admin() ) {
 		load_plugin_textdomain( 'ruigehond-embed', null, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		add_action( 'admin_init', 'ruigehond015_settings' );
@@ -33,32 +39,38 @@ function ruigehond015_run(): void {
 
 	$url = trim( $_SERVER['REQUEST_URI'], '/' );
 
-	if ( 0 === strpos( $url, 'ruigehond_embed/' ) ) {
-		$url = str_replace( 'ruigehond_embed/', '', $url );
-		if ( true === isset( $vars['titles'][ $url ] ) ) {
-			wp_redirect( $vars['titles'][ $url ], 307, 'Ruigehond-embed' );
-			die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
+	if ( 0 === strpos( $url, 'ruigehond_embed/' )
+	     && ( $url = str_replace( 'ruigehond_embed/', '', $url ) )
+	     && true === isset( $vars['titles'][ $url ] )
+	) {
+		$redirect = $vars['titles'][ $url ];
+		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
+			$redirect = "$redirect/"; // avoid the extra 301 redirect from WordPress
 		}
+		wp_redirect( $redirect, 307, 'Ruigehond-embed' );
+		die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
 	} elseif ( true === isset( $vars['embeds'][ $url ] )
 	           && true === isset( $_SERVER['HTTP_REFERER'] )
 	           && true === is_array( $allow = $vars['embeds'][ $url ] )
-	           && ( $referer = $_SERVER['HTTP_REFERER'] ) && true === in_array( $referer, $allow )
 	) {
-		// todo what about Content Security Policy frame ancestors?
-		add_action( 'send_headers', function () { // frontend
-			header( 'X-Ruigehond-Embed: removed X-Frame-Options if possible' );
-			header_remove( 'X-Frame-Options' );
-		}, 99 );
-		add_action( 'admin_init', function () { // admin
-			header( 'X-Ruigehond-Embed: removed X-Frame-Options if possible' );
-			header_remove( 'X-Frame-Options' );
-		}, 99 );
-	} else {
-		if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
-			header( 'X-Frame-Options: DENY' );
-		} else {
-			header( 'X-Frame-Options: SAMEORIGIN' );
+		$referrer = $_SERVER['HTTP_REFERER'];
+		if ( false === filter_var( $referrer, FILTER_VALIDATE_URL ) ) {
+			return;
 		}
+		$parts    = parse_url( $referrer );
+		$referrer = "{$parts['scheme']}://{$parts['host']}/";
+		if ( false === in_array( $referrer, $allow ) ) {
+			return;
+		}
+		// todo what about Content Security Policy frame ancestors?
+		add_action( 'send_headers', static function () use ( $referrer ) { // frontend
+			header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
+			header_remove( 'X-Frame-Options' );
+		}, 99 );
+		add_action( 'admin_init', static function () use ( $referrer ) { // admin
+			header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
+			header_remove( 'X-Frame-Options' );
+		}, 99 );
 	}
 }
 
@@ -72,7 +84,7 @@ function ruigehond015_settingspage(): void {
 	// output setting sections and their fields
 	do_settings_sections( 'ruigehond015' );
 	// output save settings button
-	submit_button( __( 'Save Settings', 'ruigehond-embed' ) );
+	submit_button( esc_html__( 'Save Settings', 'ruigehond-embed' ) );
 	echo '</form></div>';
 }
 
@@ -88,7 +100,7 @@ function ruigehond015_settings(): void {
 	// register a new section in the page
 	add_settings_section(
 		'ruigehond_embed_settings', // section id
-		__( 'Set your options', 'ruigehond-embed' ), // title
+		esc_html__( 'Set your options', 'ruigehond-embed' ), // title
 		function () {
 			echo '<p>';
 			echo esc_html__( 'To add an entry, fill in the title at the bottom of the form.', 'ruigehond-embed' );
@@ -114,7 +126,7 @@ function ruigehond015_settings(): void {
 	$explanations = array(
 		'title' => sprintf( esc_html__( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
 		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
-		'allow' => esc_html__( 'Mandatory list of referrers that may embed.', 'ruigehond-embed' ),
+		'allow' => esc_html__( 'Mandatory list of referrers that may embed this.', 'ruigehond-embed' ),
 		'xfram' => sprintf( esc_html__( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
 	);
 
@@ -226,13 +238,20 @@ function ruigehond015_settings_validate( $input ): array {
 			}
 			$vars['titles'][ $title ] = $embed;
 
-			if (null === $allow) continue; // when there are duplicate keys / referrers
+			if ( null === $allow ) {
+				continue;
+			} // when there are duplicate keys / referrers
 			$allow = explode( PHP_EOL, $allow );
 			$valid = $vars['embeds'][ $keyed ] ?? array();
 			foreach ( $allow as $index => $referrer ) {
 				$referrer = trim( $referrer ); // no whitespaces...
-				if ( $referrer && false === in_array( $referrer, $valid ) ) {
-					$valid[] = $referrer; // todo more validating?
+				if ( false === filter_var( $referrer, FILTER_VALIDATE_URL ) ) {
+					continue;
+				}
+				$parts    = parse_url( $referrer );
+				$referrer = "{$parts['scheme']}://{$parts['host']}/";
+				if ( false === in_array( $referrer, $valid ) ) {
+					$valid[] = $referrer;
 				}
 			}
 			$vars['embeds'][ $keyed ] = $valid;
@@ -244,7 +263,7 @@ function ruigehond015_settings_validate( $input ): array {
 
 function ruigehond015_settingslink( $links ): array {
 	$url           = get_admin_url();
-	$link_text     = __( 'Settings', 'ruigehond-embed' );
+	$link_text     = esc_html__( 'Settings', 'ruigehond-embed' );
 	$settings_link = "<a href=\"{$url}options-general.php?page=ruigehond-embed\">$link_text</a>";
 	array_unshift( $links, $settings_link );
 
