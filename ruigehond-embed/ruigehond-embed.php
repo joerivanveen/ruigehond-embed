@@ -28,6 +28,8 @@ function ruigehond015_run(): void {
 		add_action( 'admin_menu', 'ruigehond015_menuitem' );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ruigehond015_settingslink' ); // settings link on plugins page
 
+		wp_enqueue_style( 'ruigehond015_admin_stylesheet', plugin_dir_url( __FILE__ ) . 'admin.css', [], RUIGEHOND015_VERSION );
+
 		return;
 	}
 
@@ -78,7 +80,7 @@ function ruigehond015_settingspage(): void {
 	if ( ! current_user_can( 'administrator' ) ) {
 		return;
 	}
-	echo '<div class="wrap"><h1>Ruigehond embed</h1><form action="options.php" method="post">';
+	echo '<div class="wrap ruigehond015"><h1>Ruigehond embed</h1><form action="options.php" method="post">';
 	// output security fields for the registered setting
 	settings_fields( 'ruigehond015' );
 	// output setting sections and their fields
@@ -165,7 +167,6 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 			$value = $args['value'];
 			if ( 'title' === $args['name'] ) {
 				$explanation = sprintf( $args['explanation'], $value ?: '{{title}}' );
-				echo '<hr/>';
 			} else {
 				$explanation = $args['explanation'];
 			}

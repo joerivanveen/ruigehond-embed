@@ -1,0 +1,21 @@
+.ruigehond015 .regular-text,
+.ruigehond015 textarea {
+    width: 100%;
+}
+.ruigehond015 textarea {
+    height: 6em;
+}
+.ruigehond015 .form-table th {
+    padding-top: 13px;
+    padding-bottom: 13px;
+}
+.ruigehond015 .form-table td {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+.ruigehond015 .explanation {
+    opacity: .5;
+}
+.ruigehond015 input[name^="ruigehond015[title]"] {
+    border-top: solid 2px #000;
+}
