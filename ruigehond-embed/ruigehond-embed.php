@@ -262,7 +262,7 @@ function ruigehond015_settings_validate( $input ): array {
 		}
 	}
 
-	// todo write to .htaccess
+	// write to .htaccess
 	$htaccess = get_home_path() . '.htaccess';
 	if ( file_exists( $htaccess ) ) {
 		$str = file_get_contents( $htaccess );
@@ -290,7 +290,7 @@ function ruigehond015_settings_validate( $input ): array {
 		echo 'RewriteEngine On', PHP_EOL;
 		echo '# work with the originally requested uri, because otherwise all bets are off', PHP_EOL;
 		echo 'RewriteCond %{THE_REQUEST} \s/+([^\s?]+)', PHP_EOL;
-		echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1]', PHP_EOL;
+		echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1]', PHP_EOL; // store original request uri in env variable
 		// spill the rules
 		foreach ( $vars['titles'] as $title => $embed ) {
 			echo '# process key ', $title, PHP_EOL;
@@ -298,36 +298,45 @@ function ruigehond015_settings_validate( $input ): array {
 			if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 				$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
 			}
+			// rewrite the tag to the proper url you want embedded:
 			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $redirect, ' [QSA,R=301,L]', PHP_EOL;
+			// allow embedding from the following referrers:
 			$keyed = ruigehond015_get_key_for_embed( $embed );
 			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
-				continue;
+				continue; // not found
 			}
 			$highest = count( $vars['embeds'][ $keyed ] ) - 1;
-			if ( -1 === $highest ) {
+			if ( - 1 === $highest ) {
 				continue; // no allowed referrers apparently
 			}
 			foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
 				echo 'RewriteCond %{HTTP_REFERER} ^', trim( $referrer ), '.*';
 				if ( $index < $highest ) {
-					echo ' [OR]';
+					echo ' [OR]'; // any of the referrers is ok, separate them by OR
 				}
 				echo PHP_EOL;
 			}
 			// allow specific page, for the whole hostname / site, this condition is not necessary
 			if ( '' !== $keyed ) {
-				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, '/', PHP_EOL;
+				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, '/', PHP_EOL; // default AND will be used
 			}
-			echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL;
+			echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL; // store in env variable
 		}
-		// finish the file
+		// finish the file with correct headers from the rules when the REFERER env variable is set
 		echo '</IfModule>', PHP_EOL;
 		echo 'Header unset X-Frame-Options env=RUIGEHOND015_REFERER', PHP_EOL;
 		echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
 		echo '</IfModule>', PHP_EOL;
 		echo '# END Ruigehond015', PHP_EOL, PHP_EOL;
+		// don’t forget to add the original htaccess as well :-)
 		echo $str;
-		file_put_contents( $htaccess, ob_get_clean(), LOCK_EX );
+		if ( false === file_put_contents( $htaccess, ob_get_clean(), LOCK_EX ) ) {
+			add_settings_error(
+				'ruigehond_embed',
+				"ruigehond_embed_htaccess",
+				esc_html__( '.htaccess could not be updated!', 'ruigehond-embed' )
+			);
+		}
 	} else {
 		add_settings_error(
 			'ruigehond_embed',
