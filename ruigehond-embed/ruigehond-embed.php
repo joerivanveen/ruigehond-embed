@@ -9,6 +9,7 @@ Author URI: https://wp-developer.eu
 Version: 0.0.1
 */
 defined( 'ABSPATH' ) || die();
+// todo: put it in .htaccess... because of caching plugins...
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
 const RUIGEHOND015_VERSION = '0.0.1';
 // Startup the plugin
@@ -16,6 +17,8 @@ add_action( 'init', 'ruigehond015_run' );
 register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
 //
 function ruigehond015_run(): void {
+	$vars = get_option( 'ruigehond015' );
+
 	if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
 		header( 'X-Frame-Options: DENY' );
 	} else {
@@ -32,8 +35,6 @@ function ruigehond015_run(): void {
 
 		return;
 	}
-
-	$vars = get_option( 'ruigehond015' );
 
 	if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
 		return;
@@ -80,7 +81,11 @@ function ruigehond015_settingspage(): void {
 	if ( ! current_user_can( 'administrator' ) ) {
 		return;
 	}
-	echo '<div class="wrap ruigehond015"><h1>Ruigehond embed</h1><form action="options.php" method="post">';
+	echo '<div class="wrap ruigehond015"><h1>Ruigehond embed</h1><p>';
+	echo esc_html__( 'This plugin sends an X-Frame-Options header for all requests, to protect your site from clickjacking and such.', 'ruigehond-embed' );
+	echo '<br/>';
+	echo esc_html__( 'Specify your exceptions below, to be able to have specific pages of your site embedded from specific other domains.', 'ruigehond-embed' );
+	echo '</p><form action="options.php" method="post">';
 	// output security fields for the registered setting
 	settings_fields( 'ruigehond015' );
 	// output setting sections and their fields
@@ -109,7 +114,7 @@ function ruigehond015_settings(): void {
 			echo '<br/>';
 			echo esc_html__( 'To remove an entry, empty its title field.', 'ruigehond-embed' );
 			echo '<br/>';
-			echo esc_html__( 'Remember to hit ‘Save Settings’.', 'ruigehond-embed' );
+			echo sprintf( esc_html__( 'Remember to hit ‘%s’.', 'ruigehond-embed' ), esc_html__( 'Save Settings', 'ruigehond-embed' ) );
 			echo '</p>';
 		}, //callback
 		'ruigehond015' // page
@@ -137,15 +142,7 @@ function ruigehond015_settings(): void {
 	foreach ( $titles as $title => $embed ) {
 		ruigehond015_add_settings_field( 'title', $index, (string) $title, $explanations );
 		ruigehond015_add_settings_field( 'embed', $index, (string) $embed, $explanations );
-		if ( 0 === strpos( $embed, 'https://' )
-		     || 0 === strpos( $embed, 'http://' )
-		     || 0 === strpos( $embed, '//' )
-		) {
-			$parts = explode( '/', $embed );
-			$keyed = implode( '/', array_slice( $parts, 3 ) );
-		} else {
-			$keyed = $embed;
-		}
+		$keyed = ruigehond015_get_key_for_embed( $embed );
 		if ( true === isset( $embeds[ $keyed ] ) ) {
 			if ( is_array( $embeds[ $keyed ] ) ) {
 				ruigehond015_add_settings_field( 'allow', $index, $embeds[ $keyed ], $explanations );
@@ -157,6 +154,19 @@ function ruigehond015_settings(): void {
 		++ $index;
 	}
 	ruigehond015_add_settings_field( 'title', 0, '', $explanations );
+}
+
+function ruigehond015_get_key_for_embed( $embed ) {
+	if ( 0 === strpos( $embed, 'https://' )
+	     || 0 === strpos( $embed, 'http://' )
+	     || 0 === strpos( $embed, '//' )
+	) {
+		$parts = explode( '/', $embed );
+
+		return implode( '/', array_slice( $parts, 3 ) );
+	} else {
+		return $embed;
+	}
 }
 
 function ruigehond015_add_settings_field( $name, $index, $value, $explanations ): void {
@@ -227,17 +237,9 @@ function ruigehond015_settings_validate( $input ): array {
 		}
 
 		if ( '' !== $title ) {
-			$title = sanitize_title($title);
-			$embed = $keyed = isset( $embed ) ? trim( $embed, '/' ) : '';
-			if ( 0 === strpos( $embed, 'https://' )
-			     || 0 === strpos( $embed, 'http://' )
-			     || 0 === strpos( $embed, '//' )
-			) {
-				$parts = explode( '/', $embed );
-				$keyed = implode( '/', array_slice( $parts, 3 ) );
-			} else {
-				$embed = "/$embed";
-			}
+			$title                    = sanitize_title( $title );
+			$embed                    = isset( $embed ) ? trim( $embed, '/' ) : '';
+			$keyed                    = ruigehond015_get_key_for_embed( $embed );
 			$vars['titles'][ $title ] = $embed;
 
 			if ( null === $allow ) {
@@ -258,6 +260,76 @@ function ruigehond015_settings_validate( $input ): array {
 			}
 			$vars['embeds'][ $keyed ] = $valid;
 		}
+	}
+
+	// todo write to .htaccess
+	$htaccess = get_home_path() . '.htaccess';
+	if ( file_exists( $htaccess ) ) {
+		$str = file_get_contents( $htaccess );
+		while ( false !== ( $start = strpos( $str, '# BEGIN Ruigehond015' ) ) ) {
+			if ( false !== ( $end = strpos( $str, '# END Ruigehond015', $start ) ) ) {
+				$str = trim( substr( $str, 0, $start ) . substr( $str, $end + 18 ) );
+			} else {
+				add_settings_error(
+					'ruigehond_embed',
+					"ruigehond_embed_htaccess",
+					esc_html__( 'Error in your .htaccess, #END Ruigehond015 not found', 'ruigehond-embed' )
+				);
+
+				return $vars;
+			}
+		}
+		ob_start();
+		echo '# BEGIN Ruigehond015', PHP_EOL;
+		echo '# These directives are automatically written, DO NOT EDIT', PHP_EOL;
+		echo '# They must appear BEFORE WordPress\' own directives, or else %{THE_REQUEST} is null', PHP_EOL;
+		echo '#', PHP_EOL;
+		echo '<IfModule mod_headers.c>', PHP_EOL;
+		echo 'Header set X-Frame-Options "', $vars['xframe'], '"', PHP_EOL;
+		echo '<IfModule mod_rewrite.c>', PHP_EOL;
+		echo 'RewriteEngine On', PHP_EOL;
+		echo '# work with the originally requested uri, because otherwise all bets are off', PHP_EOL;
+		echo 'RewriteCond %{THE_REQUEST} \s/+([^\s?]+)', PHP_EOL;
+		echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1]', PHP_EOL;
+		// spill the rules
+		foreach ( $vars['titles'] as $title => $embed ) {
+			echo '# process key ', $title, PHP_EOL;
+			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $embed, ' [QSA,R=301,L]', PHP_EOL;
+			$keyed = ruigehond015_get_key_for_embed( $embed );
+			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
+				continue;
+			}
+			$highest = count( $vars['embeds'][ $keyed ] ) - 1;
+			if ( -1 === $highest ) {
+				continue; // no allowed referrers apparently
+			}
+			foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
+				echo 'RewriteCond %{HTTP_REFERER} ^', trim( $referrer ), '.*';
+				if ( $index < $highest ) {
+					echo ' [OR]';
+				}
+				echo PHP_EOL;
+			}
+			// redirect specific page, for the whole hostname / site, this condition is not necessary
+			if ( '' !== $keyed ) {
+				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, '/', PHP_EOL;
+			}
+			echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL;
+		}
+		// finish the file
+		echo '</IfModule>', PHP_EOL;
+		echo 'Header unset X-Frame-Options env=RUIGEHOND015_REFERER', PHP_EOL;
+		echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
+		echo '</IfModule>', PHP_EOL;
+		echo '# END Ruigehond015', PHP_EOL, PHP_EOL;
+		echo $str;
+		file_put_contents( $htaccess, ob_get_clean(), LOCK_EX );
+	} else {
+		add_settings_error(
+			'ruigehond_embed',
+			"ruigehond_embed_htaccess",
+			esc_html__( '.htaccess could not be updated!', 'ruigehond-embed' )
+		);
 	}
 
 	return $vars;
