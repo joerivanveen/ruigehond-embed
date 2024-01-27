@@ -48,7 +48,7 @@ function ruigehond015_run(): void {
 	) {
 		$redirect = $vars['titles'][ $url ];
 		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
-			$redirect = "$redirect/"; // avoid the extra 301 redirect from WordPress
+			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
 		}
 		wp_redirect( $redirect, 307, 'Ruigehond-embed' );
 		die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
@@ -294,7 +294,11 @@ function ruigehond015_settings_validate( $input ): array {
 		// spill the rules
 		foreach ( $vars['titles'] as $title => $embed ) {
 			echo '# process key ', $title, PHP_EOL;
-			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $embed, ' [QSA,R=301,L]', PHP_EOL;
+			$redirect = $embed;
+			if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
+				$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
+			}
+			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $redirect, ' [QSA,R=301,L]', PHP_EOL;
 			$keyed = ruigehond015_get_key_for_embed( $embed );
 			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
 				continue;
@@ -310,7 +314,7 @@ function ruigehond015_settings_validate( $input ): array {
 				}
 				echo PHP_EOL;
 			}
-			// redirect specific page, for the whole hostname / site, this condition is not necessary
+			// allow specific page, for the whole hostname / site, this condition is not necessary
 			if ( '' !== $keyed ) {
 				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, '/', PHP_EOL;
 			}
