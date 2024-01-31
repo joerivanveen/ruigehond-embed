@@ -48,6 +48,12 @@ function ruigehond015_run(): void {
 		$redirect = $vars['titles'][ $url ];
 		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
+			if ( 0 !== strpos( $redirect, 'http://' )
+			     && 0 !== strpos( $redirect, 'https://' )
+			     && 0 !== strpos( $redirect, '//' )
+			) {
+				$redirect = "/$redirect";
+			}
 		}
 		wp_redirect( $redirect, 307, 'Ruigehond-embed' );
 		die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
@@ -212,7 +218,8 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 }
 
 function ruigehond015_settings_validate( $input ): array {
-	$vars           = $old_vars = (array) get_option( 'ruigehond015' );
+	$vars = (array) get_option( 'ruigehond015' );
+
 	$vars['titles'] = array();
 	$vars['embeds'] = array();
 	$vars['xframe'] = 'SAMEORIGIN';
@@ -245,7 +252,7 @@ function ruigehond015_settings_validate( $input ): array {
 				$old_title = $title;
 				$title     = random_int( 0, 9 ) . "_$title";
 				while ( in_array( $title, $titles_had ) ) {
-					random_int( 0, 9 ) . "$title";
+					random_int( 0, 9 ) . $title;
 				}
 				add_settings_error(
 					'ruigehond_embed',
@@ -258,7 +265,7 @@ function ruigehond015_settings_validate( $input ): array {
 				$embed = $keyed = md5( (string) random_int( 100000, 999999 ) );
 				add_settings_error(
 					'ruigehond_embed',
-					"ruigehond_embed_htaccess",
+					'ruigehond_embed_htaccess',
 					sprintf( esc_html__( 'Embed for %s not allowed, duplicate key will lead to trouble. Substituted %s', 'ruigehond-embed' ), $title, $embed )
 				);
 			}
@@ -267,6 +274,15 @@ function ruigehond015_settings_validate( $input ): array {
 
 			$titles_had[] = $title;
 			$keyeds_had[] = $keyed;
+
+			if ( '' === $keyed ) {
+				add_settings_error(
+					'ruigehond_embed',
+					'ruigehond_embed_key_is_empty',
+					sprintf( esc_html__( 'Warning for %s: allowing the root of your site to be embedded effectively allows everything to be embedded, this may not be what you want. Specify a distinct url in ‘embed’ then.', 'ruigehond-embed' ), $title ),
+					'warning'
+				);
+			}
 
 			if ( null === $allow ) {
 				continue; // when there are duplicate keys / referrers
