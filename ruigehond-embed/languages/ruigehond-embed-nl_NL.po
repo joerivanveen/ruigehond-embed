@@ -1,0 +1,111 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: ruigehond015 0.0.1\n"
+"POT-Creation-Date: 2024-01-31 14:42+0100\n"
+"PO-Revision-Date: 2024-01-31 15:20+0100\n"
+"Last-Translator: \n"
+"Language-Team: ruigehond\n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.4.2\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: esc_html__\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: languages\n"
+
+#: ruigehond-embed.php:90
+msgid ""
+"This plugin sends an X-Frame-Options header for all requests, to protect "
+"your site."
+msgstr ""
+"Deze plugin stuurt een X-Frame-Options header voor alle requests, om je site "
+"te beschermen."
+
+#: ruigehond-embed.php:92
+msgid ""
+"Specify your exceptions below, to be able to have specific pages of your "
+"site embedded from specific other domains."
+msgstr ""
+"Geef hieronder uitzonderingen aan, om specifieke pagina’s van je site te "
+"laten embedden vanaf specifieke andere domeinen."
+
+#: ruigehond-embed.php:99 ruigehond-embed.php:126
+msgid "Save Settings"
+msgstr "Instellingen opslaan"
+
+#: ruigehond-embed.php:119
+msgid "Set your options"
+msgstr "Instellingen"
+
+#: ruigehond-embed.php:122
+msgid "To add an entry, fill in the title at the bottom of the form."
+msgstr ""
+"Om een vermelding toe te voegen, vul de titel in onderaan het formulier."
+
+#: ruigehond-embed.php:124
+msgid "To remove an entry, empty its title field."
+msgstr "Om een vermelding te verwijderen, leeg het titel veld."
+
+#: ruigehond-embed.php:126
+#, php-format
+msgid "Remember to hit ‘%s’."
+msgstr "Vergeet niet ‘%s’ te drukken."
+
+#: ruigehond-embed.php:143
+#, php-format
+msgid "Iframe src: %s/ruigehond_embed/%s"
+msgstr "Iframe src: %s/ruigehond_embed/%s"
+
+#: ruigehond-embed.php:144
+msgid "Local or fully qualified uri that will be embedded."
+msgstr "Lokale of volledige gekwalificeerde url die geëmbed wordt."
+
+#: ruigehond-embed.php:145
+msgid "Mandatory list of referrers that may embed this."
+msgstr "Verplichte lijst referrers die dit mogen embedden."
+
+#: ruigehond-embed.php:146
+#, php-format
+msgid "%1$s header sent by default, possible values are %2$s and %3$s."
+msgstr ""
+"Standaard %1$s header die verstuurd wordt, mogelijke waarden zijn %2$s en "
+"%3$s."
+
+#: ruigehond-embed.php:260
+#, php-format
+msgid "Duplicate title not allowed %s -> %s"
+msgstr "Dubbele titel niet toegestaan %s -> %s"
+
+#: ruigehond-embed.php:269
+#, php-format
+msgid ""
+"Embed for %s not allowed, duplicate key will lead to trouble. Substituted %s"
+msgstr ""
+"Embed voor %s niet toegestaan, dubbele sleutel levert problemen op. "
+"Vervangen door %s"
+
+#: ruigehond-embed.php:282
+#, php-format
+msgid ""
+"Warning for %s: allowing the root of your site to be embedded effectively "
+"allows everything to be embedded, this may not be what you want. Specify a "
+"distinct url in ‘embed’ then."
+msgstr ""
+"Waarschuwing voor %s: wanneer je de root van je site laat embedden mag per "
+"saldo alles van die site geëmbed worden, dit is misschien niet je bedoeling. "
+"Vul een specifieke url bij ‘embed’ in dan."
+
+#: ruigehond-embed.php:321
+msgid "Error in your .htaccess, #END Ruigehond015 not found"
+msgstr "Fout in je .htaccess, #END Ruigehond015 not found"
+
+#: ruigehond-embed.php:382 ruigehond-embed.php:389
+msgid ".htaccess could not be updated!"
+msgstr ".htaccess kon niet geüpdatet worden!"
+
+#: ruigehond-embed.php:398
+msgid "Settings"
+msgstr "Instellingen"

@@ -4,9 +4,12 @@ declare( strict_types=1 );
 Plugin Name: Ruigehond embed
 Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
+Version: 1.0.0
 Author: Joeri van Veen
 Author URI: https://wp-developer.eu
-Version: 1.0.0
+License: GPLv3
+Text Domain: ruigehond-embed
+Domain Path: /languages/
 */
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
@@ -87,7 +90,7 @@ function ruigehond015_settingspage(): void {
 		return;
 	}
 	echo '<div class="wrap ruigehond015"><h1>Ruigehond embed</h1><p>';
-	echo esc_html__( 'This plugin sends an X-Frame-Options header for all requests, to protect your site from clickjacking and such.', 'ruigehond-embed' );
+	echo esc_html__( 'This plugin sends an X-Frame-Options header for all requests, to protect your site.', 'ruigehond-embed' );
 	echo '<br/>';
 	echo esc_html__( 'Specify your exceptions below, to be able to have specific pages of your site embedded from specific other domains.', 'ruigehond-embed' );
 	echo '</p><form action="options.php" method="post">';
