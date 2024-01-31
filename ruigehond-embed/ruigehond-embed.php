@@ -337,8 +337,9 @@ function ruigehond015_settings_validate( $input ): array {
 		echo '<IfModule mod_rewrite.c>', PHP_EOL;
 		echo 'RewriteEngine On', PHP_EOL;
 		echo '# work with the originally requested uri, because otherwise all bets are off', PHP_EOL;
-		echo 'RewriteCond %{THE_REQUEST} \s/+([^\s?]+)', PHP_EOL;
-		echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1]', PHP_EOL; // store original request uri in env variable
+		// apparently a # is allowed in the regex, without being interpreted as a middle of the line comment which is not allowed...
+		echo 'RewriteCond %{THE_REQUEST} \s/+([^\s?]+)([^#\s]*)', PHP_EOL;
+		echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1%2]', PHP_EOL; // store original request uri in env variable
 		// spill the rules
 		foreach ( $vars['titles'] as $title => $embed ) {
 			echo '# process key ', $title, PHP_EOL;
@@ -346,8 +347,9 @@ function ruigehond015_settings_validate( $input ): array {
 			if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 				$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
 			}
-			// rewrite the tag to the proper url you want embedded:
-			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $redirect, ' [QSA,R=301,L]', PHP_EOL;
+			// rewrite the tag to the proper url you want embedded
+			// escaping any % because they denote backreference in this context in the htaccess
+			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace('%', '\%', $redirect), ' [NE,QSA,R=301,L]', PHP_EOL;
 			// allow embedding from the following referrers:
 			$keyed = ruigehond015_get_key_for_embed( $embed );
 			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
@@ -366,7 +368,14 @@ function ruigehond015_settings_validate( $input ): array {
 			}
 			// allow specific page, for the whole hostname / site, this condition is not necessary
 			if ( '' !== $keyed ) {
-				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, '/', PHP_EOL; // default AND will be used
+				if (false !== strpos($keyed, '?')) {
+					// escape question marks in htaccess, or it will not match
+					$keyed = str_replace( '?', '\?', $keyed);
+				} else {
+					// url's end in forward slash normally
+					$keyed = "$keyed/";
+				}
+				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, PHP_EOL; // default AND will be used
 			}
 			echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL; // store in env variable
 		}
