@@ -349,7 +349,8 @@ function ruigehond015_settings_validate( $input ): array {
 			}
 			// rewrite the tag to the proper url you want embedded
 			// escaping any % because they denote backreference in this context in the htaccess
-			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace('%', '\%', $redirect), ' [NE,QSA,R=301,L]', PHP_EOL;
+			// NE for no escaping (url is already escaped)
+			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace('%', '\%', $redirect), ' [NE,QSD,R=301,L]', PHP_EOL;
 			// allow embedding from the following referrers:
 			$keyed = ruigehond015_get_key_for_embed( $embed );
 			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
