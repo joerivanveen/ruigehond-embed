@@ -5,7 +5,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hallo
 Requires at least: 5.0
 Tested up to: 6.3
 Requires PHP: 7.4
-Stable tag: 0.0.1
+Stable tag: 1.0.0
 License: GPLv3
 
 Embed selected urls from your website elsewhere

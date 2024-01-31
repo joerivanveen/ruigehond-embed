@@ -6,12 +6,11 @@ Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
 Author: Joeri van Veen
 Author URI: https://wp-developer.eu
-Version: 0.0.1
+Version: 1.0.0
 */
 defined( 'ABSPATH' ) || die();
-// todo: put it in .htaccess... because of caching plugins...
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
-const RUIGEHOND015_VERSION = '0.0.1';
+const RUIGEHOND015_VERSION = '1.0.0';
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
 register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
@@ -104,6 +103,10 @@ function ruigehond015_settings(): void {
 	 * - the function that will validate the options
 	 */
 	register_setting( 'ruigehond015', 'ruigehond015', 'ruigehond015_settings_validate' );
+	// don’t bother with all this if we’re not even on the settings page
+	if ( false === isset( $_GET['page'] ) || 'ruigehond-embed' !== $_GET['page'] ) {
+		return;
+	}
 	// register a new section in the page
 	add_settings_section(
 		'ruigehond_embed_settings', // section id
@@ -122,7 +125,7 @@ function ruigehond015_settings(): void {
 
 	$vars = (array) get_option( 'ruigehond015' );
 
-	//echo PHP_EOL, '<!-- RUIGEHOND015', PHP_EOL, var_export( $vars, true ), PHP_EOL, '-->', PHP_EOL;
+	echo PHP_EOL, '<!-- RUIGEHOND015', PHP_EOL, var_export( $vars, true ), PHP_EOL, '-->', PHP_EOL;
 
 	$titles = $vars['titles'] ?? array();
 	$embeds = $vars['embeds'] ?? array();
@@ -131,7 +134,7 @@ function ruigehond015_settings(): void {
 
 	$host         = site_url();
 	$explanations = array(
-		'title' => sprintf( esc_html__( 'Summon by title: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
+		'title' => sprintf( esc_html__( 'Iframe src: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
 		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
 		'allow' => esc_html__( 'Mandatory list of referrers that may embed this.', 'ruigehond-embed' ),
 		'xfram' => sprintf( esc_html__( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
@@ -222,29 +225,53 @@ function ruigehond015_settings_validate( $input ): array {
 	$embeds = $input['embed'] ?? array();
 	$allows = $input['allow'] ?? array();
 
+	$titles_had = array();
+	$keyeds_had = array();
+
 	foreach ( $titles as $index => $title ) {
 		$embed = $embeds[ $index ] ?? null;
 		$allow = $allows[ $index ] ?? null;
 
-		if ( isset( $vars['titles'][ $title ] ) ) {
-			add_settings_error(
-				'ruigehond_embed',
-				"ruigehond_embed_$index",
-				sprintf( esc_html__( 'Duplicate titles not allowed: %s', 'ruigehond-embed' ), $title )
-			);
-
-			return $old_vars;
-		}
-
 		if ( '' !== $title ) {
-			$title                    = sanitize_title( $title );
-			$embed                    = isset( $embed ) ? trim( $embed, '/' ) : '';
-			$keyed                    = ruigehond015_get_key_for_embed( $embed );
+			$title = sanitize_title( $title );
+			$embed = isset( $embed ) ? trim( $embed, '/' ) : '';
+			// no hashtags allowed
+			if ( false !== strpos( $embed, '#' ) ) {
+				$embed = explode( '#', $embed )[0];
+			}
+			$keyed = ruigehond015_get_key_for_embed( $embed );
+
+			if ( in_array( $title, $titles_had ) ) {
+				$old_title = $title;
+				$title     = random_int( 0, 9 ) . "_$title";
+				while ( in_array( $title, $titles_had ) ) {
+					random_int( 0, 9 ) . "$title";
+				}
+				add_settings_error(
+					'ruigehond_embed',
+					"ruigehond_embed_htaccess",
+					sprintf( esc_html__( 'Duplicate title not allowed %s -> %s', 'ruigehond-embed' ), $old_title, $title )
+				);
+			}
+
+			if ( in_array( $keyed, $keyeds_had ) ) {
+				$embed = $keyed = md5( (string) random_int( 100000, 999999 ) );
+				add_settings_error(
+					'ruigehond_embed',
+					"ruigehond_embed_htaccess",
+					sprintf( esc_html__( 'Embed for %s not allowed, duplicate key will lead to trouble. Substituted %s', 'ruigehond-embed' ), $title, $embed )
+				);
+			}
+
 			$vars['titles'][ $title ] = $embed;
 
+			$titles_had[] = $title;
+			$keyeds_had[] = $keyed;
+
 			if ( null === $allow ) {
-				continue;
-			} // when there are duplicate keys / referrers
+				continue; // when there are duplicate keys / referrers
+			}
+
 			$allow = explode( PHP_EOL, $allow );
 			$valid = $vars['embeds'][ $keyed ] ?? array();
 			foreach ( $allow as $index => $referrer ) {
@@ -258,6 +285,8 @@ function ruigehond015_settings_validate( $input ): array {
 					$valid[] = $referrer;
 				}
 			}
+
+			sort( $valid ); // always alphabetically
 			$vars['embeds'][ $keyed ] = $valid;
 		}
 	}
@@ -281,8 +310,8 @@ function ruigehond015_settings_validate( $input ): array {
 		}
 		ob_start();
 		echo '# BEGIN Ruigehond015', PHP_EOL;
-		echo '# These directives are automatically written, DO NOT EDIT', PHP_EOL;
-		echo '# They must appear BEFORE WordPress\' own directives, or else %{THE_REQUEST} is null', PHP_EOL;
+		echo '# These directives are maintained by Ruigehond-embed, DO NOT EDIT', PHP_EOL;
+		echo '# They must appear BEFORE WordPress\' own directives, or the embedding will not work because %{THE_REQUEST} will be null', PHP_EOL;
 		echo '#', PHP_EOL;
 		echo '<IfModule mod_headers.c>', PHP_EOL;
 		echo 'Header set X-Frame-Options "', $vars['xframe'], '"', PHP_EOL;
