@@ -186,7 +186,8 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 			$name     = $args['name'];
 			$input_id = "ruigehond015[$name][{$args['index']}]";
 			if ( 'title' === $name ) {
-				$explanation = sprintf( $args['explanation'], $value ?: '{{title}}' );
+				// add the space to be certain the link will be split by javascript
+				$explanation = sprintf( $args['explanation'], "$value " ?: '{{title}}' );
 			} else {
 				$explanation = $args['explanation'];
 			}

@@ -44,7 +44,7 @@ function ruigehond015() {
         if ((link = getLink(parts))) {
             const copy = document.createElement('span');
             copy.classList.add('copy-to-clipboard');
-            copy.innerHTML = 'copy';
+            copy.innerHTML = '→📋';
             copy.onclick = function (e) {
                 e.preventDefault();
                 e.stopPropagation();
