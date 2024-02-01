@@ -11,6 +11,10 @@ License: GPLv3
 Text Domain: ruigehond-embed
 Domain Path: /languages/
 */
+
+// TODO remove htaccess rules upon deactivation
+// TODO activate htaccess upon re-activation of the plugin
+// TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
 const RUIGEHOND015_VERSION = '1.0.0';
@@ -406,8 +410,8 @@ function ruigehond015_settings_validate( $input ): array {
 		echo 'Header unset X-Frame-Options env=RUIGEHOND015_REFERER', PHP_EOL;
 		echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
 		if ( true === $set_csp_header ) {
-			// edit the csp header after all other processing (keyword 'always'), meaning other plugins can potentially break this
-			echo 'Header always edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e*" env=RUIGEHOND015_REFERER', PHP_EOL;
+			// edit the csp header, other plugins can potentially break this
+			echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e* " env=RUIGEHOND015_REFERER', PHP_EOL;
 		}
 		echo '</IfModule>', PHP_EOL;
 		echo '# END Ruigehond015', PHP_EOL, PHP_EOL;
