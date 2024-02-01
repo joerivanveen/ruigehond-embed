@@ -12,8 +12,9 @@ Text Domain: ruigehond-embed
 Domain Path: /languages/
 */
 
-// TODO remove htaccess rules upon deactivation
+// TODO remove htaccess rules upon deactivation (add placeholder...)
 // TODO activate htaccess upon re-activation of the plugin
+// TODO write the rules in the spot they are in now, if they are present, or a placeholder remains
 // TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
@@ -353,11 +354,12 @@ function ruigehond015_settings_validate( $input ): array {
 		echo '# These directives are maintained by Ruigehond-embed, DO NOT EDIT', PHP_EOL;
 		echo '# They must appear BEFORE WordPress\' own directives, or the embedding will not work because %{THE_REQUEST} will be null', PHP_EOL;
 		echo '#', PHP_EOL;
+		echo '<IfModule mod_setenvif.c>', PHP_EOL;
 		echo '<IfModule mod_headers.c>', PHP_EOL;
 		echo 'Header set X-Frame-Options "', $x_frame_options, '"', PHP_EOL;
 		if ( true === $set_csp_header ) {
 			// set the csp header before processing
-			echo 'Header set Content-Security-Policy "frame-ancestors \'', $frame_ancestors, '\';"', PHP_EOL;
+			echo 'Header setifempty Content-Security-Policy "frame-ancestors \'', $frame_ancestors, '\';"', PHP_EOL;
 		}
 		echo '<IfModule mod_rewrite.c>', PHP_EOL;
 		echo 'RewriteEngine On', PHP_EOL;
@@ -413,6 +415,7 @@ function ruigehond015_settings_validate( $input ): array {
 			// edit the csp header, other plugins can potentially break this
 			echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e* " env=RUIGEHOND015_REFERER', PHP_EOL;
 		}
+		echo '</IfModule>', PHP_EOL;
 		echo '</IfModule>', PHP_EOL;
 		echo '# END Ruigehond015', PHP_EOL, PHP_EOL;
 		// don’t forget to add the original htaccess as well :-)
