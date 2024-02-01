@@ -147,9 +147,11 @@ function ruigehond015_settings(): void {
 		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
 		'allow' => esc_html__( 'Mandatory list of referrers that may embed this.', 'ruigehond-embed' ),
 		'xfram' => sprintf( esc_html__( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
+		'csp_h' => ( esc_html__( 'Set CSP header. Be aware that other plugins could also mess with this header.', 'ruigehond-embed' ) ),
 	);
 
 	ruigehond015_add_settings_field( 'xfram', 0, $vars['xframe'] ?? '', $explanations );
+	ruigehond015_add_settings_field( 'csp_h', 0, $vars['setcsp'] ?? false, $explanations );
 
 	foreach ( $titles as $title => $embed ) {
 		ruigehond015_add_settings_field( 'title', $index, (string) $title, $explanations );
@@ -187,26 +189,33 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 		$name,
 		function ( $args ) {
 			$value = $args['value'];
+			$name  = "ruigehond015[{$args['name']}][{$args['index']}]";
 			if ( 'title' === $args['name'] ) {
 				$explanation = sprintf( $args['explanation'], $value ?: '{{title}}' );
 			} else {
 				$explanation = $args['explanation'];
 			}
 			if ( is_array( $value ) ) {
-				echo '<textarea name="ruigehond015[', $args['name'], '][', $args['index'], ']">';
+				echo '<textarea name="', $name, '" id="', $name, '">';
 				echo implode( PHP_EOL, array_map( static function ( $value ) {
 					return htmlentities( $value );
 				}, $value ) );
 				echo '</textarea>';
+			} elseif ( is_bool( $value ) ) {
+				echo '<input type="checkbox" name="', $name, '" id="', $name, '"';
+				if ( true === $value ) {
+					echo ' checked="checked"';
+				}
+				echo '/>';
 			} else {
-				echo '<input type="text" name="ruigehond015[', $args['name'], '][', $args['index'], ']" value="';
+				echo '<input type="text" name="', $name, '" id="', $name, '" value="';
 				echo htmlentities( $value );
 				echo '" class="regular-text"/>';
 			}
 			if ( isset( $args['explanation'] ) ) {
-				echo '<div class="ruigehond015 explanation"><em>';
+				echo '<label for="', $name, '" class="ruigehond015 explanation"><em>';
 				echo $explanation;
-				echo '</em></div>';
+				echo '</em></label>';
 			}
 		},
 		'ruigehond015',
@@ -226,9 +235,14 @@ function ruigehond015_settings_validate( $input ): array {
 	$vars['titles'] = array();
 	$vars['embeds'] = array();
 	$vars['xframe'] = 'SAMEORIGIN';
+	$set_csp_header = false;
 
 	if ( 'DENY' === $input['xfram'][0] ) {
 		$vars['xframe'] = 'DENY';
+	}
+
+	if ( 'on' === $input['csp_h'][0] ) {
+		$set_csp_header = true;
 	}
 
 	$titles = $input['title'] ?? array();
@@ -327,13 +341,24 @@ function ruigehond015_settings_validate( $input ): array {
 				return $vars;
 			}
 		}
+		if ( 'DENY' === $vars['xframe'] ) {
+			$frame_ancestors = 'none';
+			$x_frame_options = 'DENY';
+		} else {
+			$frame_ancestors = 'self';
+			$x_frame_options = 'SAMEORIGIN';
+		}
 		ob_start();
 		echo '# BEGIN Ruigehond015', PHP_EOL;
 		echo '# These directives are maintained by Ruigehond-embed, DO NOT EDIT', PHP_EOL;
 		echo '# They must appear BEFORE WordPress\' own directives, or the embedding will not work because %{THE_REQUEST} will be null', PHP_EOL;
 		echo '#', PHP_EOL;
 		echo '<IfModule mod_headers.c>', PHP_EOL;
-		echo 'Header set X-Frame-Options "', $vars['xframe'], '"', PHP_EOL;
+		echo 'Header set X-Frame-Options "', $x_frame_options, '"', PHP_EOL;
+		if ( true === $set_csp_header ) {
+			// set the csp header before processing
+			echo 'Header set Content-Security-Policy "frame-ancestors \'', $frame_ancestors, '\';"', PHP_EOL;
+		}
 		echo '<IfModule mod_rewrite.c>', PHP_EOL;
 		echo 'RewriteEngine On', PHP_EOL;
 		echo '# work with the originally requested uri, because otherwise all bets are off', PHP_EOL;
@@ -350,7 +375,7 @@ function ruigehond015_settings_validate( $input ): array {
 			// rewrite the tag to the proper url you want embedded
 			// escaping any % because they denote backreference in this context in the htaccess
 			// NE for no escaping (url is already escaped)
-			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace('%', '\%', $redirect), ' [NE,QSD,R=301,L]', PHP_EOL;
+			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace( '%', '\%', $redirect ), ' [NE,QSD,R=301,L]', PHP_EOL;
 			// allow embedding from the following referrers:
 			$keyed = ruigehond015_get_key_for_embed( $embed );
 			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
@@ -369,9 +394,9 @@ function ruigehond015_settings_validate( $input ): array {
 			}
 			// allow specific page, for the whole hostname / site, this condition is not necessary
 			if ( '' !== $keyed ) {
-				if (false !== strpos($keyed, '?')) {
+				if ( false !== strpos( $keyed, '?' ) ) {
 					// escape question marks in htaccess, or it will not match
-					$keyed = str_replace( '?', '\?', $keyed);
+					$keyed = str_replace( '?', '\?', $keyed );
 				} else {
 					// url's end in forward slash normally
 					$keyed = "$keyed/";
@@ -384,6 +409,10 @@ function ruigehond015_settings_validate( $input ): array {
 		echo '</IfModule>', PHP_EOL;
 		echo 'Header unset X-Frame-Options env=RUIGEHOND015_REFERER', PHP_EOL;
 		echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
+		if ( true === $set_csp_header ) {
+			// edit the csp header after all other processing (keyword 'always'), meaning other plugins can potentially break this
+			echo 'Header always edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e*" env=RUIGEHOND015_REFERER', PHP_EOL;
+		}
 		echo '</IfModule>', PHP_EOL;
 		echo '# END Ruigehond015', PHP_EOL, PHP_EOL;
 		// don’t forget to add the original htaccess as well :-)
@@ -395,6 +424,7 @@ function ruigehond015_settings_validate( $input ): array {
 				esc_html__( '.htaccess could not be updated!', 'ruigehond-embed' )
 			);
 		}
+		$vars['setcsp'] = $set_csp_header;
 	} else {
 		add_settings_error(
 			'ruigehond_embed',
