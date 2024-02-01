@@ -33,8 +33,6 @@ function ruigehond015_run(): void {
 		add_action( 'admin_menu', 'ruigehond015_menuitem' );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ruigehond015_settingslink' ); // settings link on plugins page
 
-		wp_enqueue_style( 'ruigehond015_admin_stylesheet', plugin_dir_url( __FILE__ ) . 'admin.css', [], RUIGEHOND015_VERSION );
-
 		return;
 	}
 
@@ -93,7 +91,7 @@ function ruigehond015_settingspage(): void {
 	echo esc_html__( 'This plugin sends an X-Frame-Options header for all requests, to protect your site.', 'ruigehond-embed' );
 	echo '<br/>';
 	echo esc_html__( 'Specify your exceptions below, to be able to have specific pages of your site embedded from specific other domains.', 'ruigehond-embed' );
-	echo '</p><form action="options.php" method="post">';
+	echo '</p><form action="options.php" method="post" id="ruigehond015-settings-form">';
 	// output security fields for the registered setting
 	settings_fields( 'ruigehond015' );
 	// output setting sections and their fields
@@ -104,18 +102,14 @@ function ruigehond015_settingspage(): void {
 }
 
 function ruigehond015_settings(): void {
-	/**
-	 * register a new setting, call this function for each setting
-	 * Arguments: (Array)
-	 * - group, the same as in settings_fields, for security / nonce etc.
-	 * - the name of the options
-	 * - the function that will validate the options
-	 */
 	register_setting( 'ruigehond015', 'ruigehond015', 'ruigehond015_settings_validate' );
 	// don’t bother with all this if we’re not even on the settings page
 	if ( false === isset( $_GET['page'] ) || 'ruigehond-embed' !== $_GET['page'] ) {
 		return;
 	}
+	// scripts used on the settings page
+	wp_enqueue_style( 'ruigehond015_admin_stylesheet', plugin_dir_url( __FILE__ ) . 'admin.css', [], RUIGEHOND015_VERSION );
+	wp_enqueue_script( 'ruigehond015_admin_javascript', plugin_dir_url( __FILE__ ) . 'admin.js', [], RUIGEHOND015_VERSION );
 	// register a new section in the page
 	add_settings_section(
 		'ruigehond_embed_settings', // section id
@@ -188,32 +182,33 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 		"ruigehond015_{$name}_$index",
 		$name,
 		function ( $args ) {
-			$value = $args['value'];
-			$name  = "ruigehond015[{$args['name']}][{$args['index']}]";
-			if ( 'title' === $args['name'] ) {
+			$value    = $args['value'];
+			$name     = $args['name'];
+			$input_id = "ruigehond015[$name][{$args['index']}]";
+			if ( 'title' === $name ) {
 				$explanation = sprintf( $args['explanation'], $value ?: '{{title}}' );
 			} else {
 				$explanation = $args['explanation'];
 			}
 			if ( is_array( $value ) ) {
-				echo '<textarea name="', $name, '" id="', $name, '">';
+				echo '<textarea name="', $input_id, '" id="', $input_id, '">';
 				echo implode( PHP_EOL, array_map( static function ( $value ) {
 					return htmlentities( $value );
 				}, $value ) );
 				echo '</textarea>';
 			} elseif ( is_bool( $value ) ) {
-				echo '<input type="checkbox" name="', $name, '" id="', $name, '"';
+				echo '<input type="checkbox" name="', $input_id, '" id="', $input_id, '"';
 				if ( true === $value ) {
 					echo ' checked="checked"';
 				}
 				echo '/>';
 			} else {
-				echo '<input type="text" name="', $name, '" id="', $name, '" value="';
+				echo '<input type="text" name="', $input_id, '" id="', $input_id, '" value="';
 				echo htmlentities( $value );
 				echo '" class="regular-text"/>';
 			}
 			if ( isset( $args['explanation'] ) ) {
-				echo '<label for="', $name, '" class="ruigehond015 explanation"><em>';
+				echo '<label for="', $input_id, '" class="ruigehond015 explanation ', $name, '"><em>';
 				echo $explanation;
 				echo '</em></label>';
 			}

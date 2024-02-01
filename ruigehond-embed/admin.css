@@ -15,7 +15,22 @@
 }
 .ruigehond015 .explanation {
     opacity: .5;
+    cursor: inherit;
+}
+.ruigehond015 input[type="checkbox"] + .explanation {
+    cursor: pointer;
 }
 .ruigehond015 input[name^="ruigehond015[title]"] {
     border-top: solid 2px #000;
 }
+/* copy to clipboard */
+.ruigehond015 .copy-to-clipboard {
+    cursor:pointer;
+    margin-left: 1em;
+}
+.ruigehond015 .copy-to-clipboard.fail {
+    color: red;
+}
+.ruigehond015 .copy-to-clipboard.success {
+     color: green;
+ }
