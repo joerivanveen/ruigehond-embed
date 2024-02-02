@@ -5,6 +5,9 @@ Plugin Name: Ruigehond embed
 Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
 Version: 1.0.0
+Requires at least: 5.0
+Tested up to: 6.3
+Requires PHP: 7.4
 Author: Joeri van Veen
 Author URI: https://wp-developer.eu
 License: GPLv3
@@ -419,7 +422,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 	echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
 	if ( true === $set_csp_header ) {
 		// edit the csp header, other plugins can potentially break this
-		echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e* " env=RUIGEHOND015_REFERER', PHP_EOL;
+		echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e " env=RUIGEHOND015_REFERER', PHP_EOL;
 	}
 	echo '</IfModule>', PHP_EOL;
 	echo '</IfModule>', PHP_EOL, '#';
