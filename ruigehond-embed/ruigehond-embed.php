@@ -77,7 +77,7 @@ function ruigehond015_run(): void {
 		if ( false === in_array( $referrer, $allow ) ) {
 			return;
 		}
-		// todo what about Content Security Policy frame ancestors?
+		// todo what about Content Security Policy frame ancestors here?
 		add_action( 'send_headers', static function () use ( $referrer ) { // frontend
 			header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
 			header_remove( 'X-Frame-Options' );
@@ -87,6 +87,22 @@ function ruigehond015_run(): void {
 			header_remove( 'X-Frame-Options' );
 		}, 99 );
 	}
+}
+
+function ruigehond015_get_safe_url( string $url ): string {
+	$parts = explode( '/', $url );
+	foreach ( $parts as $index => $part ) {
+		if ( 'http:' === $part || 'https:' === $part ) {
+			continue;
+		}
+		$parts[ $index ] = str_replace( array( '%3F', '%3D', '%26' ), array(
+			'?',
+			'=',
+			'&'
+		), rawurlencode( rawurldecode( $part ) ) );
+	}
+
+	return implode( '/', $parts );
 }
 
 function ruigehond015_settingspage(): void {
@@ -364,9 +380,10 @@ function ruigehond015_process_htaccess( array $vars ): array {
 			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
 		}
 		// rewrite the tag to the proper url you want embedded
-		// escaping any % because they denote backreference in this context in the htaccess
+		// escaping % because they denote backreference in this context in the htaccess
+		$safe_url = str_replace( '%', '\%', ruigehond015_get_safe_url( $redirect ) );
 		// NE for no escaping (url is already escaped)
-		echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace( '%', '\%', $redirect ), ' [NE,QSD,R=301,L]', PHP_EOL;
+		echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $safe_url, ' [NE,QSD,R=301,L]', PHP_EOL;
 		// allow embedding from the following referrers:
 		$keyed = ruigehond015_get_key_for_embed( $embed );
 		if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
@@ -384,7 +401,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 			echo PHP_EOL;
 		}
 		// allow specific page, for the whole hostname / site, this condition is not necessary
-		if ( '' !== $keyed ) {
+		if ( '' !== $keyed && false !== $keyed = ruigehond015_get_safe_url( $keyed ) ) {
 			if ( false !== strpos( $keyed, '?' ) ) {
 				// escape question marks in htaccess, or it will not match
 				$keyed = str_replace( '?', '\?', $keyed );
