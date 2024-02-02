@@ -350,6 +350,9 @@ function ruigehond015_settings_validate( $input ): array {
 }
 
 function ruigehond015_process_htaccess( array $vars ): array {
+	if ( false === isset( $vars['titles'], $vars['embeds'], $vars['xframe'] ) ) {
+		return $vars;
+	}
 	$set_csp_header = ( true === isset( $vars['setcsp'] ) && true === $vars['setcsp'] );
 	if ( 'DENY' === $vars['xframe'] ) {
 		$frame_ancestors = 'none';
@@ -425,7 +428,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e " env=RUIGEHOND015_REFERER', PHP_EOL;
 	}
 	echo '</IfModule>', PHP_EOL;
-	echo '</IfModule>', PHP_EOL, '#';
+	echo '</IfModule>'; // no PHP_EOL because inserting the lines in htaccess will take care of that
 	if ( false === ruigehond015_write_to_htaccess( ob_get_clean(), 'Ruigehond015' ) ) {
 		add_settings_error(
 			'ruigehond_embed',
