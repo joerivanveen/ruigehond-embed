@@ -6,19 +6,6 @@ function ruigehond015() {
         return;
     }
 
-    async function copyToClipboard(str) {
-        if (navigator.clipboard) {
-            console.warn('navigator ok');
-            await navigator.clipboard.writeText(str).then(function () {
-                return true;
-            }).catch(function () {
-                return false;
-            });
-        } else {
-            return false;
-        }
-    }
-
     function getLink(parts) {
         let i, part;
         const len = parts.length;
@@ -45,18 +32,20 @@ function ruigehond015() {
             const copy = document.createElement('span');
             copy.classList.add('copy-to-clipboard');
             copy.innerHTML = '→📋';
-            copy.onclick = function (e) {
+            copy.style.whiteSpace = 'nowrap';
+            copy.setAttribute('data-link', link);
+            copy.onclick = async function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                copyToClipboard(link).then(function (success) {
-                    if (success) {
-                        copy.classList.add('success');
-                        setTimeout(function () {
-                            copy.classList.remove('success');
-                        }, 3000);
-                    } else {
-                        copy.classList.add('fail');
-                    }
+                const link = this.getAttribute('data-link');
+                const butt = this;
+                await navigator.clipboard.writeText(link).then(function () {
+                    butt.classList.add('success');
+                    setTimeout(function () {
+                        butt.classList.remove('success');
+                    }, 3000);
+                }).catch(function () {
+                    butt.classList.add('fail');
                 });
             }
             explanation.appendChild(copy);
