@@ -12,15 +12,16 @@ Text Domain: ruigehond-embed
 Domain Path: /languages/
 */
 
-// TODO remove htaccess rules upon deactivation (add placeholder...)
-// TODO activate htaccess upon re-activation of the plugin
-// TODO write the rules in the spot they are in now, if they are present, or a placeholder remains
 // TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
 const RUIGEHOND015_VERSION = '1.0.0';
+$ruigehond015_basename = plugin_basename( __FILE__ );
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
+add_action( "activate_$ruigehond015_basename", 'ruigehond015_activate' );
+add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
+// todo move uninstall to file
 register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
 //
 function ruigehond015_run(): void {
@@ -192,7 +193,7 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 			$input_id = "ruigehond015[$name][{$args['index']}]";
 			if ( 'title' === $name ) {
 				// add the space to be certain the link will be split by javascript
-				$explanation = sprintf( $args['explanation'], ($value ?: '{{title}}') . ' ' );
+				$explanation = sprintf( $args['explanation'], ( $value ?: '{{title}}' ) . ' ' );
 			} else {
 				$explanation = $args['explanation'];
 			}
@@ -324,111 +325,88 @@ function ruigehond015_settings_validate( $input ): array {
 			$vars['embeds'][ $keyed ] = $valid;
 		}
 	}
+	$vars['setcsp'] = $set_csp_header;
 
-	// write to .htaccess
-	$htaccess = get_home_path() . '.htaccess';
-	if ( file_exists( $htaccess ) ) {
-		$str = file_get_contents( $htaccess );
-		while ( false !== ( $start = strpos( $str, '# BEGIN Ruigehond015' ) ) ) {
-			if ( false !== ( $end = strpos( $str, '# END Ruigehond015', $start ) ) ) {
-				$str = trim( substr( $str, 0, $start ) . substr( $str, $end + 18 ) );
-			} else {
-				add_settings_error(
-					'ruigehond_embed',
-					"ruigehond_embed_htaccess",
-					esc_html__( 'Error in your .htaccess, #END Ruigehond015 not found', 'ruigehond-embed' )
-				);
+	return ruigehond015_process_htaccess( $vars );
+}
 
-				return $vars;
-			}
-		}
-		if ( 'DENY' === $vars['xframe'] ) {
-			$frame_ancestors = 'none';
-			$x_frame_options = 'DENY';
-		} else {
-			$frame_ancestors = 'self';
-			$x_frame_options = 'SAMEORIGIN';
-		}
-		ob_start();
-		echo '# BEGIN Ruigehond015', PHP_EOL;
-		echo '# These directives are maintained by Ruigehond-embed, DO NOT EDIT', PHP_EOL;
-		echo '# They must appear BEFORE WordPress\' own directives, or the embedding will not work because %{THE_REQUEST} will be null', PHP_EOL;
-		echo '#', PHP_EOL;
-		echo '<IfModule mod_setenvif.c>', PHP_EOL;
-		echo '<IfModule mod_headers.c>', PHP_EOL;
-		echo 'Header set X-Frame-Options "', $x_frame_options, '"', PHP_EOL;
-		if ( true === $set_csp_header ) {
-			// set the csp header before processing
-			echo 'Header setifempty Content-Security-Policy "frame-ancestors \'', $frame_ancestors, '\';"', PHP_EOL;
-		}
-		echo '<IfModule mod_rewrite.c>', PHP_EOL;
-		echo 'RewriteEngine On', PHP_EOL;
-		echo '# work with the originally requested uri, because otherwise all bets are off', PHP_EOL;
-		// apparently a # is allowed in the regex, without being interpreted as a middle of the line comment which is not allowed...
-		echo 'RewriteCond %{THE_REQUEST} \s/+([^\s?]+)([^#\s]*)', PHP_EOL;
-		echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1%2]', PHP_EOL; // store original request uri in env variable
-		// spill the rules
-		foreach ( $vars['titles'] as $title => $embed ) {
-			echo '# process key ', $title, PHP_EOL;
-			$redirect = $embed;
-			if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
-				$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
-			}
-			// rewrite the tag to the proper url you want embedded
-			// escaping any % because they denote backreference in this context in the htaccess
-			// NE for no escaping (url is already escaped)
-			echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace( '%', '\%', $redirect ), ' [NE,QSD,R=301,L]', PHP_EOL;
-			// allow embedding from the following referrers:
-			$keyed = ruigehond015_get_key_for_embed( $embed );
-			if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
-				continue; // not found
-			}
-			$highest = count( $vars['embeds'][ $keyed ] ) - 1;
-			if ( - 1 === $highest ) {
-				continue; // no allowed referrers apparently
-			}
-			foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
-				echo 'RewriteCond %{HTTP_REFERER} ^', trim( $referrer ), '.*';
-				if ( $index < $highest ) {
-					echo ' [OR]'; // any of the referrers is ok, separate them by OR
-				}
-				echo PHP_EOL;
-			}
-			// allow specific page, for the whole hostname / site, this condition is not necessary
-			if ( '' !== $keyed ) {
-				if ( false !== strpos( $keyed, '?' ) ) {
-					// escape question marks in htaccess, or it will not match
-					$keyed = str_replace( '?', '\?', $keyed );
-				} else {
-					// url's end in forward slash normally
-					$keyed = "$keyed/";
-				}
-				echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, PHP_EOL; // default AND will be used
-			}
-			echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL; // store in env variable
-		}
-		// finish the file with correct headers from the rules when the REFERER env variable is set
-		echo '</IfModule>', PHP_EOL;
-		echo 'Header unset X-Frame-Options env=RUIGEHOND015_REFERER', PHP_EOL;
-		echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
-		if ( true === $set_csp_header ) {
-			// edit the csp header, other plugins can potentially break this
-			echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e* " env=RUIGEHOND015_REFERER', PHP_EOL;
-		}
-		echo '</IfModule>', PHP_EOL;
-		echo '</IfModule>', PHP_EOL;
-		echo '# END Ruigehond015', PHP_EOL, PHP_EOL;
-		// don’t forget to add the original htaccess as well :-)
-		echo $str;
-		if ( false === file_put_contents( $htaccess, ob_get_clean(), LOCK_EX ) ) {
-			add_settings_error(
-				'ruigehond_embed',
-				"ruigehond_embed_htaccess",
-				esc_html__( '.htaccess could not be updated!', 'ruigehond-embed' )
-			);
-		}
-		$vars['setcsp'] = $set_csp_header;
+function ruigehond015_process_htaccess( array $vars ): array {
+	$set_csp_header = ( true === isset( $vars['setcsp'] ) && true === $vars['setcsp'] );
+	if ( 'DENY' === $vars['xframe'] ) {
+		$frame_ancestors = 'none';
+		$x_frame_options = 'DENY';
 	} else {
+		$frame_ancestors = 'self';
+		$x_frame_options = 'SAMEORIGIN';
+	}
+	ob_start();
+	echo '# These directives are maintained by Ruigehond-embed, DO NOT EDIT', PHP_EOL;
+	echo '# They must appear BEFORE WordPress\' own directives, or the embedding will not work because %{THE_REQUEST} will be null', PHP_EOL;
+	echo '#', PHP_EOL;
+	echo '<IfModule mod_setenvif.c>', PHP_EOL;
+	echo '<IfModule mod_headers.c>', PHP_EOL;
+	echo 'Header set X-Frame-Options "', $x_frame_options, '"', PHP_EOL;
+	if ( true === $set_csp_header ) {
+		// set the csp header before processing
+		echo 'Header setifempty Content-Security-Policy "frame-ancestors \'', $frame_ancestors, '\';"', PHP_EOL;
+	}
+	echo '<IfModule mod_rewrite.c>', PHP_EOL;
+	echo 'RewriteEngine On', PHP_EOL;
+	echo '# work with the originally requested uri, because otherwise all bets are off', PHP_EOL;
+	// apparently a # is allowed in the regex, without being interpreted as a middle of the line comment which is not allowed...
+	echo 'RewriteCond %{THE_REQUEST} \s/+([^\s?]+)([^#\s]*)', PHP_EOL;
+	echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1%2]', PHP_EOL; // store original request uri in env variable
+	// spill the rules
+	foreach ( $vars['titles'] as $title => $embed ) {
+		echo '# process key ', $title, PHP_EOL;
+		$redirect = $embed;
+		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
+			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
+		}
+		// rewrite the tag to the proper url you want embedded
+		// escaping any % because they denote backreference in this context in the htaccess
+		// NE for no escaping (url is already escaped)
+		echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', str_replace( '%', '\%', $redirect ), ' [NE,QSD,R=301,L]', PHP_EOL;
+		// allow embedding from the following referrers:
+		$keyed = ruigehond015_get_key_for_embed( $embed );
+		if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
+			continue; // not found
+		}
+		$highest = count( $vars['embeds'][ $keyed ] ) - 1;
+		if ( - 1 === $highest ) {
+			continue; // no allowed referrers apparently
+		}
+		foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
+			echo 'RewriteCond %{HTTP_REFERER} ^', trim( $referrer ), '.*';
+			if ( $index < $highest ) {
+				echo ' [OR]'; // any of the referrers is ok, separate them by OR
+			}
+			echo PHP_EOL;
+		}
+		// allow specific page, for the whole hostname / site, this condition is not necessary
+		if ( '' !== $keyed ) {
+			if ( false !== strpos( $keyed, '?' ) ) {
+				// escape question marks in htaccess, or it will not match
+				$keyed = str_replace( '?', '\?', $keyed );
+			} else {
+				// url's end in forward slash normally
+				$keyed = "$keyed/";
+			}
+			echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, PHP_EOL; // default AND will be used
+		}
+		echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL; // store in env variable
+	}
+	// finish the file with correct headers from the rules when the REFERER env variable is set
+	echo '</IfModule>', PHP_EOL;
+	echo 'Header unset X-Frame-Options env=RUIGEHOND015_REFERER', PHP_EOL;
+	echo 'Header set X-Ruigehond-Embed "%{RUIGEHOND015_REQUEST}e allowed from %{RUIGEHOND015_REFERER}e" env=RUIGEHOND015_REFERER', PHP_EOL;
+	if ( true === $set_csp_header ) {
+		// edit the csp header, other plugins can potentially break this
+		echo 'Header edit Content-Security-Policy "frame-ancestors " "frame-ancestors %{RUIGEHOND015_REFERER}e* " env=RUIGEHOND015_REFERER', PHP_EOL;
+	}
+	echo '</IfModule>', PHP_EOL;
+	echo '</IfModule>', PHP_EOL, '#';
+	if ( false === ruigehond015_write_to_htaccess( ob_get_clean(), 'Ruigehond015' ) ) {
 		add_settings_error(
 			'ruigehond_embed',
 			"ruigehond_embed_htaccess",
@@ -437,6 +415,115 @@ function ruigehond015_settings_validate( $input ): array {
 	}
 
 	return $vars;
+}
+
+function ruigehond015_write_to_htaccess( string $content, string $marker ): bool {
+	$filename = get_home_path() . '.htaccess';
+	if ( false === file_exists( $filename ) || false === is_writable( $filename ) ) {
+		add_settings_error(
+			'ruigehond_embed',
+			"ruigehond_embed_htaccess",
+			esc_html__( 'No .htaccess or file not writable.', 'ruigehond-embed' ),
+			'warning'
+		);
+
+		return false;
+	}
+	$insertion = explode( PHP_EOL, $content );
+
+	$start_marker = "# BEGIN {$marker}";
+	$end_marker   = "# END {$marker}";
+
+	$fp = fopen( $filename, 'r+' );
+
+	if ( ! $fp ) {
+		return false;
+	}
+
+	// Attempt to get a lock. If the filesystem supports locking, this will block until the lock is acquired.
+	flock( $fp, LOCK_EX );
+
+	$lines = array();
+
+	while ( ! feof( $fp ) ) {
+		$lines[] = rtrim( fgets( $fp ), "\r\n" );
+	}
+
+	// Insert the insertion at the current marked location, or at the beginning (!) if not found
+	$pre_lines        = array();
+	$post_lines       = array();
+	$existing_lines   = array();
+	$found_marker     = false;
+	$found_end_marker = false;
+
+	foreach ( $lines as $line ) {
+		if ( false === $found_marker && false !== strpos( $line, $start_marker ) ) {
+			$found_marker = true;
+			continue;
+		} elseif ( false === $found_end_marker && false !== strpos( $line, $end_marker ) ) {
+			$found_end_marker = true;
+			continue;
+		}
+
+		if ( false === $found_marker ) {
+			$pre_lines[] = $line;
+		} elseif ( true === $found_end_marker ) {
+			$post_lines[] = $line;
+		} else {
+			$existing_lines[] = $line;
+		}
+	}
+
+	if ( $found_marker !== $found_end_marker ) {
+		add_settings_error(
+			'ruigehond_embed',
+			"ruigehond_embed_htaccess",
+			esc_html__( 'Start or end marker missing.', 'ruigehond-embed' ),
+			'warning'
+		);
+
+		return false;
+	}
+
+	// we want to insert at the beginning, for a new entry
+	if ( false === $found_end_marker ) {
+		$post_lines = $pre_lines;
+		$pre_lines  = array();
+	}
+
+	// Check to see if there was a change.
+	if ( $existing_lines === $insertion ) {
+		flock( $fp, LOCK_UN );
+		fclose( $fp );
+
+		return true;
+	}
+
+	// Generate the new file data.
+	$new_file_data = implode(
+		PHP_EOL,
+		array_merge(
+			$pre_lines,
+			array( $start_marker ),
+			$insertion,
+			array( $end_marker ),
+			$post_lines
+		)
+	);
+
+	// Write to the start of the file, and truncate it to that length.
+	fseek( $fp, 0 );
+	$bytes = fwrite( $fp, $new_file_data );
+
+	if ( $bytes ) {
+		ftruncate( $fp, ftell( $fp ) );
+	}
+
+	fflush( $fp );
+	flock( $fp, LOCK_UN );
+	fclose( $fp );
+
+	return (bool) $bytes;
 }
 
 function ruigehond015_settingslink( $links ): array {
@@ -458,6 +545,17 @@ function ruigehond015_menuitem(): void {
 	);
 }
 
+function ruigehond015_activate(): void {
+	$vars = get_option( 'ruigehond015' );
+	if ( true === is_array( $vars ) ) {
+		$vars = ruigehond015_process_htaccess( $vars );
+	}
+}
+
 function ruigehond015_uninstall(): void {
 	delete_option( 'ruigehond015' );
+}
+
+function ruigehond015_deactivate(): void {
+	ruigehond015_write_to_htaccess( '# PLACEHOLDER, plugin Ruigehond-embed is deactivated', 'Ruigehond015' );
 }
