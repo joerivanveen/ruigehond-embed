@@ -2,6 +2,8 @@
  * send information to the embedding website to resize the iframe as to disappear
  */
 function ruigehond015_unframe() {
+    if (parent === self) return;
+
     let dimensions_new, dimensions_old = {width: 0, height: 0};
     /* set params for the content to align with the parent smoothly */
     const html = document.getElementsByTagName('html')[0];
@@ -10,8 +12,6 @@ function ruigehond015_unframe() {
     html.style.padding = '0';
     body.style.margin = '0';
     body.style.padding = '0';
-
-    if (parent === self) return;
 
     function getHigh() {
         //https://stackoverflow.com/a/11864824
