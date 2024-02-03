@@ -42,10 +42,6 @@ function ruigehond015_run(): void {
 
 	$vars = get_option( 'ruigehond015' );
 
-	if ( false === isset( $vars['titles'] ) ) {
-		return;
-	}
-
 	if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
 		header( 'X-Frame-Options: DENY' );
 	} else {
@@ -58,6 +54,10 @@ function ruigehond015_run(): void {
 		add_action( 'admin_menu', 'ruigehond015_menuitem' );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ruigehond015_settingslink' ); // settings link on plugins page
 
+		return;
+	}
+
+	if ( false === isset( $vars['titles'] ) ) {
 		return;
 	}
 
