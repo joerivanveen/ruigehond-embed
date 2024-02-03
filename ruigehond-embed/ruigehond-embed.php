@@ -24,10 +24,24 @@ $ruigehond015_basename = plugin_basename( __FILE__ );
 add_action( 'init', 'ruigehond015_run' );
 add_action( "activate_$ruigehond015_basename", 'ruigehond015_activate' );
 add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
+/* this is for the parent website: */
+add_shortcode( 'ruigehond-embed', 'ruigehond015_shortcode' );
+function ruigehond015_shortcode($attributes = [], $content = null, $short_code = 'ruigehond-embed') {
+	if (false === isset($attributes['src'])) {
+		return esc_html__('Attribute "src" missing', 'ruigehond-embed');
+	}
+	$src = $attributes['src'];
+	wp_enqueue_script( 'ruigehond015_snuggle_javascript', plugin_dir_url( __FILE__ ) . 'snuggle.js', [], RUIGEHOND015_VERSION );
+
+	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;' src='$src'></iframe>";
+}
+
 // todo move uninstall to file
 register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
 //
 function ruigehond015_run(): void {
+	wp_enqueue_script( 'ruigehond015_unframe_javascript', plugin_dir_url( __FILE__ ) . 'unframe.js', [], RUIGEHOND015_VERSION );
+
 	$vars = get_option( 'ruigehond015' );
 
 	if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
@@ -98,11 +112,11 @@ function ruigehond015_get_safe_url( string $url ): string {
 		if ( 'http:' === $part || 'https:' === $part ) {
 			continue;
 		}
-		$parts[ $index ] = str_replace( array( '%3F', '%3D', '%26' ), array(
-			'?',
-			'=',
-			'&'
-		), rawurlencode( rawurldecode( $part ) ) );
+		$parts[ $index ] = str_replace(
+			array( '%3F', '%3D', '%26' ),
+			array( '?', '=', '&' ),
+			rawurlencode( rawurldecode( $part ) )
+		);
 	}
 
 	return implode( '/', $parts );
