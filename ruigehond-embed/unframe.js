@@ -4,7 +4,7 @@
 function ruigehond015_unframe() {
     if (parent === self) return;
 
-    let dimensions_new, dimensions_old = {width: 0, height: 0};
+    let resizeThrottler, dimensions_new, dimensions_old = {width: 0, height: 0};
     /* set params for the content to align with the parent smoothly */
     const html = document.getElementsByTagName('html')[0];
     const body = document.body;
@@ -13,15 +13,10 @@ function ruigehond015_unframe() {
     body.style.margin = '0';
     body.style.padding = '0';
 
-    function getHigh() {
-        //https://stackoverflow.com/a/11864824
-        return Math.max(body.scrollHeight, document.documentElement.scrollHeight)
-    }
-
     function sendToParent() {
         dimensions_new = {
             'width': window.innerWidth,
-            'height': getHigh()
+            'height': body.scrollHeight
         };
 
         if ((dimensions_new.width !== dimensions_old.width)
@@ -48,6 +43,11 @@ function ruigehond015_unframe() {
     } else { // if no mutation observer check for changes on a timed interval
         window.setInterval(sendToParent, 300);
     }
+
+    window.addEventListener('resize', function () {
+        window.clearTimeout(resizeThrottler);
+        resizeThrottler = window.setTimeout(sendToParent, 49);
+    });
 
     sendToParent();
 }
