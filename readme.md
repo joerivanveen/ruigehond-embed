@@ -1,4 +1,4 @@
-# ruigehond embed
+# Ruigehond embed
 
 WordPress plugin to embed selected urls from your site elsewhere.
 
@@ -6,6 +6,13 @@ WordPress plugin to embed selected urls from your site elsewhere.
 
 Other embedding will be prohibited by default, with an `X-Frame-Options` header and, optionally, a `Content Security Policy` header.
 This will secure your WordPress website from a number of fairly easy attacks.
+
+## Embedding
+
+The settings described below are for use on the website you want to designate url’s on that may be embedded by other sites.
+If you use this plugin on a site that will embed such an url, you can use the shortcode `[ruigehond-embed]` to generate a clean iframe for you.
+This requires the `src` attribute, example: `[ruigehond-embed src='http://wordpress.local/ruigehond_embed/title-of-the-entry']`.
+In addition, it will receive updates on the actual height of the content from your main site, and adjust the iframe accordingly.
 
 ## Use htaccess
 
@@ -19,7 +26,6 @@ This plugin needs `mod_headers`, `mod_rewrite` and `mod_setenvif` to be activate
 When the htaccess is not processed, the plugin itself works directly with the request in the php processor.
 The CSP header is not supported in that case.
 Also, other plugins (especially caching plugins) may already have decided on a different route and this plugin might not work.
-
 
 ## Content Security Policy
 
