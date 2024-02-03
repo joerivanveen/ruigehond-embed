@@ -61,7 +61,7 @@ function ruigehond015_run(): void {
 		return;
 	}
 
-	if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+	if ( false === isset( $_SERVER['REQUEST_URI'] ) ) {
 		return;
 	}
 
