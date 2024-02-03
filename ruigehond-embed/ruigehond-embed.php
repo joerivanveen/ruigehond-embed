@@ -6,7 +6,7 @@ Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
 Version: 1.0.0
 Requires at least: 5.0
-Tested up to: 6.3
+Tested up to: 6.4
 Requires PHP: 7.4
 Author: Joeri van Veen
 Author URI: https://wp-developer.eu
@@ -26,7 +26,7 @@ add_action( "activate_$ruigehond015_basename", 'ruigehond015_activate' );
 add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
 /* this is for the parent website: */
 add_shortcode( 'ruigehond-embed', 'ruigehond015_shortcode' );
-function ruigehond015_shortcode($attributes = [], $content = null, $short_code = 'ruigehond-embed') {
+function ruigehond015_shortcode($attributes = [], $content = null, $short_code = 'ruigehond-embed'): string {
 	if (false === isset($attributes['src'])) {
 		return esc_html__('Attribute "src" missing', 'ruigehond-embed');
 	}
@@ -35,9 +35,6 @@ function ruigehond015_shortcode($attributes = [], $content = null, $short_code =
 
 	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;' src='$src'></iframe>";
 }
-
-// todo move uninstall to file
-register_uninstall_hook( __FILE__, 'ruigehond015_uninstall' );
 //
 function ruigehond015_run(): void {
 	wp_enqueue_script( 'ruigehond015_unframe_javascript', plugin_dir_url( __FILE__ ) . 'unframe.js', [], RUIGEHOND015_VERSION );
@@ -203,7 +200,7 @@ function ruigehond015_settings(): void {
 	ruigehond015_add_settings_field( 'title', 0, '', $explanations );
 }
 
-function ruigehond015_get_key_for_embed( $embed ) {
+function ruigehond015_get_key_for_embed( string $embed ): string {
 	if ( 0 === strpos( $embed, 'https://' )
 	     || 0 === strpos( $embed, 'http://' )
 	     || 0 === strpos( $embed, '//' )
@@ -587,10 +584,6 @@ function ruigehond015_activate(): void {
 	if ( true === is_array( $vars ) ) {
 		$vars = ruigehond015_process_htaccess( $vars );
 	}
-}
-
-function ruigehond015_uninstall(): void {
-	delete_option( 'ruigehond015' );
 }
 
 function ruigehond015_deactivate(): void {
