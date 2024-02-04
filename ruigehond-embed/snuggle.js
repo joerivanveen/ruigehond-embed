@@ -4,7 +4,6 @@ function ruigehond015_snuggle(event) {
         len = iframes.length;
     for (let i = 0; i < len; i++) {
         if (iframes[i].contentWindow === event.source) {
-            //iframes[i].width = Number( event.data.width )	 <--- we do not do anything with the page width for now
             iframes[i].style.height = `${event.data.height}px`;
 
             return;

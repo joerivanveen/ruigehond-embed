@@ -23,7 +23,7 @@ function ruigehond015() {
     const form = document.getElementById('ruigehond015-settings-form');
     if (!form) return;
     const explanations = form.querySelectorAll('.ruigehond015.explanation.title');
-    const len = explanations.length;
+    const len = explanations.length - 1; // forget about the last one (new title)
     let i, explanation, parts, link;
     for (i = 0; i < len; ++i) {
         explanation = explanations[i];
