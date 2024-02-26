@@ -486,7 +486,12 @@ function ruigehond015_write_to_htaccess( string $content, string $marker ): bool
 	$lines = array();
 
 	while ( ! feof( $fp ) ) {
-		$lines[] = rtrim( fgets( $fp ), "\r\n" );
+		if ( false === ( $line = fgets( $fp ) ) ) {
+			$fp = null;
+
+			return false;
+		}
+		$lines[] = rtrim( $line, "\r\n" );
 	}
 
 	// Insert the insertion at the current marked location, or at the beginning (!) if not found
