@@ -169,7 +169,7 @@ function ruigehond015_settings(): void {
 
 	$vars = (array) get_option( 'ruigehond015' );
 
-	echo PHP_EOL, '<!-- RUIGEHOND015', PHP_EOL, var_export( $vars, true ), PHP_EOL, '-->', PHP_EOL;
+	//echo PHP_EOL, '<!-- RUIGEHOND015', PHP_EOL, var_export( $vars, true ), PHP_EOL, '-->', PHP_EOL;
 
 	$titles = $vars['titles'] ?? array();
 	$embeds = $vars['embeds'] ?? array();
@@ -423,7 +423,8 @@ function ruigehond015_process_htaccess( array $vars ): array {
 			echo PHP_EOL;
 		}
 		// allow specific page, for the whole hostname / site, this condition is not necessary
-		if ( '' !== $keyed && false !== $keyed = ruigehond015_get_safe_url( $keyed ) ) {
+		if ( '' !== $keyed ) {
+			$keyed = ruigehond015_get_safe_url( $keyed );
 			if ( false !== strpos( $keyed, '?' ) ) {
 				// escape question marks in htaccess, or it will not match
 				$keyed = str_replace( '?', '\?', $keyed );
@@ -585,6 +586,7 @@ function ruigehond015_menuitem(): void {
 }
 
 function ruigehond015_activate(): void {
+	// re-add htaccess lines, if there is info stored in the option
 	$vars = get_option( 'ruigehond015' );
 	if ( true === is_array( $vars ) ) {
 		$vars = ruigehond015_process_htaccess( $vars );
@@ -592,5 +594,6 @@ function ruigehond015_activate(): void {
 }
 
 function ruigehond015_deactivate(): void {
+	// remove htaccess lines
 	ruigehond015_write_to_htaccess( '# PLACEHOLDER, plugin Ruigehond-embed is deactivated', 'Ruigehond015' );
 }
