@@ -109,7 +109,7 @@ function ruigehond015_run(): void {
 }
 
 function ruigehond015_get_safe_url( string $url ): string {
-	$parts = explode( '/', $url );
+	$parts = explode( '/', trim( $url ) );
 	foreach ( $parts as $index => $part ) {
 		if ( 'http:' === $part || 'https:' === $part ) {
 			continue;
@@ -396,7 +396,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 	echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1%2]', PHP_EOL; // store original request uri in env variable
 	// spill the rules
 	foreach ( $vars['titles'] as $title => $embed ) {
-		echo '# process key ', $title, PHP_EOL;
+		echo '# process key ', sanitize_title( $title ), PHP_EOL;
 		$redirect = $embed;
 		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
@@ -405,7 +405,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		// escaping % because they denote backreference in this context in the htaccess
 		$safe_url = str_replace( '%', '\%', ruigehond015_get_safe_url( $redirect ) );
 		// NE for no escaping (url is already escaped)
-		echo 'RewriteRule ^ruigehond_embed/', $title, '$ ', $safe_url, ' [NE,QSD,R=301,L]', PHP_EOL;
+		echo 'RewriteRule ^ruigehond_embed/', sanitize_title( $title ), '$ ', $safe_url, ' [NE,QSD,R=301,L]', PHP_EOL;
 		// allow embedding from the following referrers:
 		$keyed = ruigehond015_get_key_for_embed( $embed );
 		if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
@@ -416,7 +416,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 			continue; // no allowed referrers apparently
 		}
 		foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
-			echo 'RewriteCond %{HTTP_REFERER} ^', trim( $referrer ), '.*';
+			echo 'RewriteCond %{HTTP_REFERER} ^', ruigehond015_get_safe_url( $referrer ), '.*';
 			if ( $index < $highest ) {
 				echo ' [OR]'; // any of the referrers is ok, separate them by OR
 			}
@@ -449,7 +449,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 	if ( false === ruigehond015_write_to_htaccess( ob_get_clean(), 'Ruigehond015' ) ) {
 		add_settings_error(
 			'ruigehond_embed',
-			"ruigehond_embed_htaccess",
+			'ruigehond_embed_htaccess',
 			esc_html__( '.htaccess could not be updated!', 'ruigehond-embed' )
 		);
 	}
@@ -462,7 +462,7 @@ function ruigehond015_write_to_htaccess( string $content, string $marker ): bool
 	if ( false === file_exists( $filename ) || false === is_writable( $filename ) ) {
 		add_settings_error(
 			'ruigehond_embed',
-			"ruigehond_embed_htaccess",
+			'ruigehond_embed_htaccess',
 			esc_html__( 'No .htaccess or file not writable.', 'ruigehond-embed' ),
 			'warning'
 		);
@@ -477,6 +477,13 @@ function ruigehond015_write_to_htaccess( string $content, string $marker ): bool
 	$fp = fopen( $filename, 'r+' );
 
 	if ( ! $fp ) {
+		add_settings_error(
+			'ruigehond_embed',
+			'ruigehond_embed_htaccess',
+			esc_html__( 'Could not get pointer to the file.', 'ruigehond-embed' ),
+			'warning'
+		);
+
 		return false;
 	}
 
@@ -488,6 +495,12 @@ function ruigehond015_write_to_htaccess( string $content, string $marker ): bool
 	while ( ! feof( $fp ) ) {
 		if ( false === ( $line = fgets( $fp ) ) ) {
 			$fp = null;
+			add_settings_error(
+				'ruigehond_embed',
+				'ruigehond_embed_htaccess',
+				esc_html__( 'Unexpected failure to get line before end of file.', 'ruigehond-embed' ),
+				'warning'
+			);
 
 			return false;
 		}
