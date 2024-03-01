@@ -492,19 +492,20 @@ function ruigehond015_write_to_htaccess( string $content, string $marker ): bool
 
 	$lines = array();
 
-	while ( ! feof( $fp ) ) {
-		if ( false === ( $line = fgets( $fp ) ) ) {
-			$fp = null;
-			add_settings_error(
-				'ruigehond_embed',
-				'ruigehond_embed_htaccess',
-				esc_html__( 'Unexpected failure to get line before end of file.', 'ruigehond-embed' ),
-				'warning'
-			);
-
-			return false;
-		}
+	while ( false !== ( $line = fgets( $fp ) ) ) {
 		$lines[] = rtrim( $line, "\r\n" );
+	}
+
+	if ( ! feof( $fp ) ) {
+		$fp = null;
+		add_settings_error(
+			'ruigehond_embed',
+			'ruigehond_embed_htaccess',
+			esc_html__( 'Did not read the whole file.', 'ruigehond-embed' ),
+			'warning'
+		);
+
+		return false;
 	}
 
 	// Insert the insertion at the current marked location, or at the beginning (!) if not found
