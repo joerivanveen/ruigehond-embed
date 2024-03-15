@@ -4,7 +4,7 @@ declare( strict_types=1 );
 Plugin Name: Ruigehond embed
 Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
-Version: 1.0.0
+Version: 1.0.1
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.4
@@ -18,7 +18,7 @@ Domain Path: /languages/
 // TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
-const RUIGEHOND015_VERSION = '1.0.0';
+const RUIGEHOND015_VERSION = '1.0.1';
 $ruigehond015_basename = plugin_basename( __FILE__ );
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
@@ -33,7 +33,7 @@ function ruigehond015_shortcode( $attributes = [], $content = null, $short_code 
 	$src = $attributes['src'];
 	wp_enqueue_script( 'ruigehond015_snuggle_javascript', plugin_dir_url( __FILE__ ) . 'snuggle.js', [], RUIGEHOND015_VERSION );
 
-	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;' src='$src'></iframe>";
+	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;overflow:auto;' src='$src'></iframe>";
 }
 
 //
