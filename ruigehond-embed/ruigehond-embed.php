@@ -49,7 +49,7 @@ function ruigehond015_run(): void {
 	}
 
 	if ( is_admin() ) {
-		load_plugin_textdomain( 'ruigehond-embed', null, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+		load_plugin_textdomain( 'ruigehond-embed', '', dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		add_action( 'admin_init', 'ruigehond015_settings' );
 		add_action( 'admin_menu', 'ruigehond015_menuitem' );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ruigehond015_settingslink' ); // settings link on plugins page
@@ -91,7 +91,7 @@ function ruigehond015_run(): void {
 		if ( false === filter_var( $referrer, FILTER_VALIDATE_URL ) ) {
 			return;
 		}
-		$parts    = parse_url( $referrer );
+		$parts    = wp_parse_url( $referrer );
 		$referrer = "{$parts['scheme']}://{$parts['host']}/";
 		if ( false === in_array( $referrer, $allow ) ) {
 			return;
@@ -349,7 +349,7 @@ function ruigehond015_settings_validate( $input ): array {
 				if ( false === filter_var( $referrer, FILTER_VALIDATE_URL ) ) {
 					continue;
 				}
-				$parts    = parse_url( $referrer );
+				$parts    = wp_parse_url( $referrer );
 				$referrer = "{$parts['scheme']}://{$parts['host']}/";
 				if ( false === in_array( $referrer, $valid ) ) {
 					$valid[] = $referrer;
