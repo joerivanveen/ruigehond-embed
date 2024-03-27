@@ -22,7 +22,7 @@ function ruigehond015_unframe() {
         if ((dimensions_new.width !== dimensions_old.width)
             || (dimensions_new.height !== dimensions_old.height)
         ) {
-            window.parent.postMessage(dimensions_new, "*");
+            window.parent.postMessage(dimensions_new, '*');
             dimensions_old = dimensions_new;
         }
     }

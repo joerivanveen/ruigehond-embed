@@ -31,6 +31,10 @@ function ruigehond015_shortcode( $attributes = [], $content = null, $short_code 
 		return esc_html__( 'Attribute "src" missing', 'ruigehond-embed' );
 	}
 	$src = $attributes['src'];
+	$url = wp_parse_url( $src );
+	if ( ! isset( $url['scheme'] ) || ! in_array( $url['scheme'], array( 'http', 'https' ) ) ) {
+		return "Ruigehond embed: src not recognized as a valid iframe src. Use a fully qualified url.";
+	}
 	wp_enqueue_script( 'ruigehond015_snuggle_javascript', plugin_dir_url( __FILE__ ) . 'snuggle.js', [], RUIGEHOND015_VERSION );
 
 	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;overflow:auto;' src='$src'></iframe>";
@@ -132,6 +136,12 @@ function ruigehond015_settingspage(): void {
 	echo esc_html__( 'This plugin sends an X-Frame-Options header for all requests, to protect your site.', 'ruigehond-embed' );
 	echo '<br/>';
 	echo esc_html__( 'Specify your exceptions below, to be able to have specific pages of your site embedded from specific other domains.', 'ruigehond-embed' );
+	echo '<br/>';
+	$str = __( 'On the site where you want to embed a page, you can use the shortcode %s to embed an url, if you have installed this plugin.', 'ruigehond-embed' );
+	if ( 1 === substr_count( $str, '%s' ) ) {
+		echo esc_html( sprintf( $str, '[ruigehond-embed-parent src="&lt;Iframe src&gt;"]' ) );
+		echo ' ', esc_html__( 'You do not need to specify an exception there.', 'ruigehond-embed' );
+	}
 	echo '</p><form action="options.php" method="post" id="ruigehond015-settings-form">';
 	// output security fields for the registered setting
 	settings_fields( 'ruigehond015' );
@@ -161,7 +171,10 @@ function ruigehond015_settings(): void {
 			echo '<br/>';
 			echo esc_html__( 'To remove an entry, empty its title field.', 'ruigehond-embed' );
 			echo '<br/>';
-			echo sprintf( esc_html__( 'Remember to hit ‘%s’.', 'ruigehond-embed' ), esc_html__( 'Save Settings', 'ruigehond-embed' ) );
+			$str = __( 'Remember to hit ‘%s’.', 'ruigehond-embed' );
+			if ( 1 === substr_count( $str, '%s' ) ) {
+				echo sprintf( esc_html( $str ), esc_html__( 'Save Settings', 'ruigehond-embed' ) );
+			}
 			echo '</p>';
 		}, //callback
 		'ruigehond015' // page
