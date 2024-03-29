@@ -4,17 +4,13 @@ function ruigehond015_snuggle(event) {
         len = iframes.length;
     for (let i = 0; i < len; i++) {
         if (iframes[i].contentWindow === event.source) {
-            iframes[i].style.height = `${event.data.height}px`;
+            const iframe = iframes[i];
+            iframe.style.height = `${event.data.height}px`;
+            iframe.contentWindow.postMessage({hostname: window.location.hostname}, '*');
 
             return;
         }
     }
 }
 
-if (document.readyState !== 'loading') {
-    window.addEventListener('message', ruigehond015_snuggle, false)
-} else {
-    document.addEventListener('DOMContentLoaded', function () {
-        window.addEventListener('message', ruigehond015_snuggle, false)
-    });
-}
+window.addEventListener('message', ruigehond015_snuggle, false)
