@@ -28,7 +28,7 @@ add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
 add_shortcode( 'ruigehond-embed', 'ruigehond015_shortcode' );
 function ruigehond015_shortcode( $attributes = [], $content = null, $short_code = 'ruigehond-embed' ): string {
 	if ( false === isset( $attributes['src'] ) ) {
-		return esc_html__( 'Attribute "src" missing', 'ruigehond-embed' );
+		return esc_html__( 'Attribute src missing', 'ruigehond-embed' );
 	}
 	$src = $attributes['src'];
 	$url = wp_parse_url( $src );
