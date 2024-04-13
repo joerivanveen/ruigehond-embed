@@ -37,7 +37,7 @@ function ruigehond015_shortcode( $attributes = [], $content = null, $short_code 
 	}
 	wp_enqueue_script( 'ruigehond015_snuggle_javascript', plugin_dir_url( __FILE__ ) . 'snuggle.js', [], RUIGEHOND015_VERSION );
 
-	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;overflow:auto;' src='$src'></iframe>";
+	return "<iframe style='width:100%;border:0;frame-border:0;height:100vh;overflow:auto;' loading='eager' src='$src'></iframe>";
 }
 
 //
