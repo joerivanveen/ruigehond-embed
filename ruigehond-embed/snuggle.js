@@ -2,6 +2,30 @@
 function ruigehond015_snuggle(event) {
     const iframes = document.querySelectorAll('iframe'),
         len = iframes.length;
+    function fromTop(iframe) {
+        // add element to beginning of body
+        const center = window.innerHeight / 2,
+            div = document.createElement('div'),
+            style = div.style;
+        let ontop;
+        style.position = 'fixed';
+        style.overflow = 'hidden';
+        style.height = '3px';
+        style.width = '100%';
+        style.backgroundColor = '#f00';
+        iframe.insertAdjacentElement('beforebegin',div);
+        // gradually move it down until nothing is blocking it anymore
+        for (let y = 1, max = window.innerHeight; y < max; y+=3) {
+            style.top = `${y}px`;
+            ontop = document.elementFromPoint(center, y + 1);
+            if (div.contains(ontop) || 'html' === ontop.tagName) {
+                div.remove();
+                return y;
+            }
+        }
+        div.remove();
+        return 0; // it’s broken
+    }
     for (let i = 0; i < len; i++) {
         if (iframes[i].contentWindow === event.source) {
             const iframe = iframes[i],
@@ -14,7 +38,7 @@ function ruigehond015_snuggle(event) {
                 let y = (data.scrollTo.y || 0);
                 let x = (data.scrollTo.x || 0);
                 // todo: implement x / horizontal scroll
-                y += iframe.getBoundingClientRect().top + window.scrollY;
+                y += iframe.getBoundingClientRect().top + window.scrollY - fromTop(iframe);
                 if ('scrollBehavior' in document.documentElement.style) {
                     window.scrollTo({
                         left: x,
