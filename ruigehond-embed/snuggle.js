@@ -12,7 +12,6 @@ function ruigehond015_snuggle(event) {
         style.overflow = 'hidden';
         style.height = '3px';
         style.width = '100%';
-        style.backgroundColor = '#f00';
         iframe.insertAdjacentElement('beforebegin',div);
         // gradually move it down until nothing is blocking it anymore
         for (let y = 1, max = window.innerHeight; y < max; y+=3) {
