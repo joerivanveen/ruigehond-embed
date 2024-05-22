@@ -4,7 +4,7 @@ function ruigehond015_snuggle(event) {
         len = iframes.length;
     function fromTop(iframe) {
         // add element to beginning of body
-        const center = window.innerHeight / 2,
+        const center = window.innerWidth / 2,
             div = document.createElement('div'),
             style = div.style;
         let ontop;
@@ -16,10 +16,14 @@ function ruigehond015_snuggle(event) {
         // gradually move it down until nothing is blocking it anymore
         for (let y = 1, max = window.innerHeight; y < max; y+=3) {
             style.top = `${y}px`;
-            ontop = document.elementFromPoint(center, y + 1);
-            if (div.contains(ontop) || 'html' === ontop.tagName) {
-                div.remove();
-                return y;
+            try { // elementFromPoint can error on mobile browsers
+                ontop = document.elementFromPoint(center, y + 1);
+                if (iframe === ontop || 'html' === ontop.tagName || div.contains(ontop)) {
+                    div.remove();
+                    return y;
+                }
+            } catch(e) {
+                break;
             }
         }
         div.remove();
