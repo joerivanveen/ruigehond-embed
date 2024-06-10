@@ -4,7 +4,7 @@ declare( strict_types=1 );
 Plugin Name: Ruigehond embed
 Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
-Version: 1.2.20
+Version: 1.3.0
 Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.4
@@ -18,7 +18,7 @@ Domain Path: /languages/
 // TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
-const RUIGEHOND015_VERSION = '1.2.20';
+const RUIGEHOND015_VERSION = '1.3.0';
 $ruigehond015_basename = plugin_basename( __FILE__ );
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
@@ -97,18 +97,21 @@ function ruigehond015_run(): void {
 		}
 		$parts    = wp_parse_url( $referrer );
 		$referrer = "{$parts['scheme']}://{$parts['host']}/";
-		if ( false === in_array( $referrer, $allow ) ) {
-			return;
+		if ( true === in_array( $referrer, $allow )
+		     // allow referrers with www. as well, when set that it should:
+			 || ( true === $vars['wwwtoo'] && false !== strpos($referrer, '://www.')
+			      && true === in_array( str_replace( '://www.', '://', $referrer ), $allow ) )
+		) {
+			// todo what about Content Security Policy frame ancestors here?
+			add_action( 'send_headers', static function () use ( $referrer ) { // frontend
+				header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
+				header_remove( 'X-Frame-Options' );
+			}, 99 );
+			add_action( 'admin_init', static function () use ( $referrer ) { // admin
+				header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
+				header_remove( 'X-Frame-Options' );
+			}, 99 );
 		}
-		// todo what about Content Security Policy frame ancestors here?
-		add_action( 'send_headers', static function () use ( $referrer ) { // frontend
-			header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
-			header_remove( 'X-Frame-Options' );
-		}, 99 );
-		add_action( 'admin_init', static function () use ( $referrer ) { // admin
-			header( "X-Ruigehond-Embed: Embed allowed from $referrer" );
-			header_remove( 'X-Frame-Options' );
-		}, 99 );
 	}
 }
 
@@ -195,11 +198,13 @@ function ruigehond015_settings(): void {
 		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
 		'allow' => esc_html__( 'Mandatory list of referrers that may embed this.', 'ruigehond-embed' ),
 		'xfram' => sprintf( esc_html__( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
-		'csp_h' => ( esc_html__( 'Set CSP header. Be aware that other plugins could also mess with this header.', 'ruigehond-embed' ) ),
+		'csp_h' => esc_html__( 'Set CSP header. Be aware that other plugins could also mess with this header.', 'ruigehond-embed' ),
+		'www_2' => esc_html__( 'As standard allow the www subdomain for each domain as well.', 'ruigehond-embed' ),
 	);
 
 	ruigehond015_add_settings_field( 'xfram', 0, $vars['xframe'] ?? '', $explanations );
 	ruigehond015_add_settings_field( 'csp_h', 0, $vars['setcsp'] ?? false, $explanations );
+	ruigehond015_add_settings_field( 'www_2', 0, $vars['wwwtoo'] ?? false, $explanations );
 
 	foreach ( $titles as $title => $embed ) {
 		ruigehond015_add_settings_field( 'title', $index, (string) $title, $explanations );
@@ -285,6 +290,7 @@ function ruigehond015_settings_validate( $input ): array {
 	$vars['titles'] = array();
 	$vars['embeds'] = array();
 	$vars['xframe'] = 'SAMEORIGIN';
+	$vars['wwwtoo'] = 'on' === $input['www_2'][0];
 	$set_csp_header = false;
 
 	if ( 'DENY' === $input['xfram'][0] ) {
@@ -379,7 +385,7 @@ function ruigehond015_settings_validate( $input ): array {
 }
 
 function ruigehond015_process_htaccess( array $vars ): array {
-	if ( false === isset( $vars['titles'], $vars['embeds'], $vars['xframe'] ) ) {
+	if ( false === isset( $vars['titles'], $vars['embeds'], $vars['xframe'], $vars['wwwtoo'] ) ) {
 		return $vars;
 	}
 	$set_csp_header = ( true === isset( $vars['setcsp'] ) && true === $vars['setcsp'] );
@@ -428,8 +434,13 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		if ( - 1 === $highest ) {
 			continue; // no allowed referrers apparently
 		}
+		$wwwtoo = true === $vars['wwwtoo'];
 		foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
-			echo 'RewriteCond %{HTTP_REFERER} ^', ruigehond015_get_safe_url( $referrer ), '.*';
+			$safe_url = ruigehond015_get_safe_url( $referrer );
+			echo 'RewriteCond %{HTTP_REFERER} ^', $safe_url, '.*';
+			if ( $wwwtoo ) { // TODO, add [OR] + www.-version if set that it should
+				echo ' [OR]', PHP_EOL, 'RewriteCond %{HTTP_REFERER} ^', str_replace( '://', '://www.', $safe_url ), '.*';
+			}
 			if ( $index < $highest ) {
 				echo ' [OR]'; // any of the referrers is ok, separate them by OR
 			}
