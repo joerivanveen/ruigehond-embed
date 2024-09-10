@@ -4,9 +4,9 @@ declare( strict_types=1 );
 Plugin Name: Ruigehond embed
 Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
-Version: 1.3.0
+Version: 1.4.0
 Requires at least: 5.0
-Tested up to: 6.4
+Tested up to: 6.6
 Requires PHP: 7.4
 Author: Joeri van Veen
 Author URI: https://wp-developer.eu
@@ -18,14 +18,14 @@ Domain Path: /languages/
 // TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
-const RUIGEHOND015_VERSION = '1.3.0';
+const RUIGEHOND015_VERSION = '1.4.0';
 $ruigehond015_basename = plugin_basename( __FILE__ );
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
 add_action( "activate_$ruigehond015_basename", 'ruigehond015_activate' );
 add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
 /* this is for the parent website: */
-add_shortcode( 'ruigehond-embed', 'ruigehond015_shortcode' );
+add_shortcode( 'ruigehond015-embed', 'ruigehond015_shortcode' );
 function ruigehond015_shortcode( $attributes = [], $content = null, $short_code = 'ruigehond-embed' ): string {
 	if ( false === isset( $attributes['src'] ) ) {
 		return esc_html__( 'Attribute src missing', 'ruigehond-embed' );
@@ -69,7 +69,7 @@ function ruigehond015_run(): void {
 		return;
 	}
 
-	$url = trim( $_SERVER['REQUEST_URI'], '/' );
+	$url = trim( sanitize_url( $_SERVER['REQUEST_URI'], array( 'http', 'https' ) ), '/' );
 
 	if ( 0 === strpos( $url, 'ruigehond_embed/' )
 	     && ( $url = str_replace( 'ruigehond_embed/', '', $url ) )
@@ -91,7 +91,7 @@ function ruigehond015_run(): void {
 	           && true === isset( $_SERVER['HTTP_REFERER'] )
 	           && true === is_array( $allow = $vars['embeds'][ $url ] )
 	) {
-		$referrer = $_SERVER['HTTP_REFERER'];
+		$referrer = sanitize_url( $_SERVER['HTTP_REFERER'] );
 		if ( false === filter_var( $referrer, FILTER_VALIDATE_URL ) ) {
 			return;
 		}
@@ -99,8 +99,8 @@ function ruigehond015_run(): void {
 		$referrer = "{$parts['scheme']}://{$parts['host']}/";
 		if ( true === in_array( $referrer, $allow )
 		     // allow referrers with www. as well, when set that it should:
-			 || ( true === $vars['wwwtoo'] && false !== strpos($referrer, '://www.')
-			      && true === in_array( str_replace( '://www.', '://', $referrer ), $allow ) )
+		     || ( true === $vars['wwwtoo'] && false !== strpos( $referrer, '://www.' )
+		          && true === in_array( str_replace( '://www.', '://', $referrer ), $allow ) )
 		) {
 			// todo what about Content Security Policy frame ancestors here?
 			add_action( 'send_headers', static function () use ( $referrer ) { // frontend
@@ -194,12 +194,12 @@ function ruigehond015_settings(): void {
 
 	$host         = site_url();
 	$explanations = array(
-		'title' => sprintf( esc_html__( 'Iframe src: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
-		'embed' => esc_html__( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
-		'allow' => esc_html__( 'Mandatory list of referrers that may embed this.', 'ruigehond-embed' ),
-		'xfram' => sprintf( esc_html__( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
-		'csp_h' => esc_html__( 'Set CSP header. Be aware that other plugins could also mess with this header.', 'ruigehond-embed' ),
-		'www_2' => esc_html__( 'As standard allow the www subdomain for each domain as well.', 'ruigehond-embed' ),
+		'title' => sprintf( __( 'Iframe src: %s/ruigehond_embed/%s', 'ruigehond-embed' ), $host, '%s' ),
+		'embed' => __( 'Local or fully qualified uri that will be embedded.', 'ruigehond-embed' ),
+		'allow' => __( 'Mandatory list of referrers that may embed this.', 'ruigehond-embed' ),
+		'xfram' => sprintf( __( '%1$s header sent by default, possible values are %2$s and %3$s.', 'ruigehond-embed' ), 'X-Frame-Options', 'DENY', 'SAMEORIGIN' ),
+		'csp_h' => __( 'Set CSP header. Be aware that other plugins could also mess with this header.', 'ruigehond-embed' ),
+		'www_2' => __( 'As standard allow the www subdomain for each domain as well.', 'ruigehond-embed' ),
 	);
 
 	ruigehond015_add_settings_field( 'xfram', 0, $vars['xframe'] ?? '', $explanations );
@@ -241,9 +241,13 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 		"ruigehond015_{$name}_$index",
 		$name,
 		function ( $args ) {
-			$value    = $args['value'];
-			$name     = $args['name'];
-			$input_id = "ruigehond015[$name][{$args['index']}]";
+			$value = $args['value'];
+			$name  = $args['name'];
+			if ( ! in_array( $name, array( 'title', 'embed', 'allow', 'xfram', 'csp_h', 'www_2' ) ) ) {
+				return; // JOERI no valid $name
+			}
+			$index    = (int) $args['index'];
+			$input_id = "ruigehond015[$name][$index]";
 			if ( 'title' === $name ) {
 				// add the space to be certain the link will be split by javascript
 				$explanation = sprintf( $args['explanation'], ( $value ?: '{{title}}' ) . ' ' );
@@ -251,25 +255,23 @@ function ruigehond015_add_settings_field( $name, $index, $value, $explanations )
 				$explanation = $args['explanation'];
 			}
 			if ( is_array( $value ) ) {
-				echo '<textarea name="', $input_id, '" id="', $input_id, '">';
-				echo implode( PHP_EOL, array_map( static function ( $value ) {
-					return htmlentities( $value );
-				}, $value ) );
+				echo '<textarea name="', esc_html( $input_id ), '" id="', esc_html( $input_id ), '">';
+				echo esc_html( implode( PHP_EOL, $value ) );
 				echo '</textarea>';
 			} elseif ( is_bool( $value ) ) {
-				echo '<input type="checkbox" name="', $input_id, '" id="', $input_id, '"';
+				echo '<input type="checkbox" name="', esc_html( $input_id ), '" id="', esc_html( $input_id ), '"';
 				if ( true === $value ) {
 					echo ' checked="checked"';
 				}
 				echo '/>';
 			} else {
-				echo '<input type="text" name="', $input_id, '" id="', $input_id, '" value="';
-				echo htmlentities( $value );
+				echo '<input type="text" name="', esc_html( $input_id ), '" id="', esc_html( $input_id ), '" value="';
+				echo esc_html( $value );
 				echo '" class="regular-text"/>';
 			}
 			if ( isset( $args['explanation'] ) ) {
-				echo '<label for="', $input_id, '" class="ruigehond015 explanation ', $name, '"><em>';
-				echo $explanation;
+				echo '<label for="', esc_html( $input_id ), '" class="ruigehond015 explanation ', esc_html( $name ), '"><em>';
+				echo wp_kses_post( $explanation );
 				echo '</em></label>';
 			}
 		},
@@ -415,7 +417,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 	echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1%2]', PHP_EOL; // store original request uri in env variable
 	// spill the rules
 	foreach ( $vars['titles'] as $title => $embed ) {
-		echo '# process key ', sanitize_title( $title ), PHP_EOL;
+		echo '# process key ', esc_html( sanitize_title( $title ) ), PHP_EOL;
 		$redirect = $embed;
 		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
@@ -424,7 +426,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		// escaping % because they denote backreference in this context in the htaccess
 		$safe_url = str_replace( '%', '\%', ruigehond015_get_safe_url( $redirect ) );
 		// NE for no escaping (url is already escaped)
-		echo 'RewriteRule ^ruigehond_embed/', sanitize_title( $title ), '$ ', $safe_url, ' [NE,QSD,R=301,L]', PHP_EOL;
+		echo 'RewriteRule ^ruigehond_embed/', esc_html( sanitize_title( $title ) ), '$ ', esc_html( $safe_url ), ' [NE,QSD,R=301,L]', PHP_EOL;
 		// allow embedding from the following referrers:
 		$keyed = ruigehond015_get_key_for_embed( $embed );
 		if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
@@ -437,9 +439,9 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		$wwwtoo = true === $vars['wwwtoo'];
 		foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
 			$safe_url = ruigehond015_get_safe_url( $referrer );
-			echo 'RewriteCond %{HTTP_REFERER} ^', $safe_url, '.*';
-			if ( $wwwtoo ) { // TODO, add [OR] + www.-version if set that it should
-				echo ' [OR]', PHP_EOL, 'RewriteCond %{HTTP_REFERER} ^', str_replace( '://', '://www.', $safe_url ), '.*';
+			echo 'RewriteCond %{HTTP_REFERER} ^', esc_html( $safe_url ), '.*';
+			if ( $wwwtoo ) { // add [OR] + www.-version if set that it should
+				echo ' [OR]', PHP_EOL, 'RewriteCond %{HTTP_REFERER} ^', str_replace( '://', '://www.', esc_html( $safe_url ) ), '.*';
 			}
 			if ( $index < $highest ) {
 				echo ' [OR]'; // any of the referrers is ok, separate them by OR
@@ -456,7 +458,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 				// url's end in forward slash normally
 				$keyed = "$keyed/";
 			}
-			echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, PHP_EOL; // default AND will be used
+			echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', esc_html( $keyed ), PHP_EOL; // default AND will be used
 		}
 		echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL; // store in env variable
 	}

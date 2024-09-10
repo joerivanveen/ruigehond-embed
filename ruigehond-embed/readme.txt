@@ -3,9 +3,9 @@ Contributors: ruigehond
 Tags: x-frame-options embed embedding iframe sameorigin
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hallo@ruigehond.nl&lc=US&item_name=ruigehond-embed&no_note=0&cn=&currency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted
 Requires at least: 6.0
-Tested up to: 6.5
+Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv3
 
 Prevent your site from being embedded. Select specific urls that may be embedded from specific origins.
@@ -38,4 +38,4 @@ Install the plugin by clicking ‘Install now’ below, or the ‘Download’ bu
 
 == Changelog ==
 
-1.2.0: release into the wild
+1.4.0: release into the wild
