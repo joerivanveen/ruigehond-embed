@@ -7,12 +7,27 @@ WordPress plugin to embed selected urls from your site elsewhere.
 Other embedding will be prohibited by default, with an `X-Frame-Options` header and, optionally, a `Content Security Policy` header.
 This will secure your WordPress website from a number of fairly easy attacks.
 
+To make this plugin especially useful you can now allow (third party) websites to embed specific urls from your site.
+Easily reuse forms or other content from your main site on satellite sites you own, without opening up any of them to attack.
+
+## Quick setup
+
+Activate the plugin and go to Settings -> Ruigehond embed.
+Add a reference (e.g. `general-contact-form`) in the _title_ field and save the settings.
+Add a slug it should serve (e.g. `/contact-clean/`) in the _embed_ field.
+Add urls that may embed this, aka referrers, (e.g. `https://my-satellite.site`) in the textarea.
+
 ## Embedding
 
-The settings described below are for use on the website you want to designate url’s on that may be embedded by other sites.
-If you use this plugin on a site that will embed such an url, you can use the shortcode `[ruigehond-embed]` to generate a clean iframe for you.
-This requires the `src` attribute, example: `[ruigehond-embed src='http://wordpress.local/ruigehond_embed/title-of-the-entry']`.
-In addition, it will receive updates on the actual height of the content from your main site, and adjust the iframe accordingly.
+Install the plugin on your satellite site. This has the added benefit of locking down that site as well.
+
+Use the simple shortcode on that site to generate an iframe with the embedded content:
+`[ruigehond-embed src="https://my-main.site/ruigehond_embed/general-contact-form"]`
+
+Watch the form magically and safely be embedded. Other sites will continue to not be able to embed your content.
+
+You can also embed a regular iframe in html, as long as the referrer is whitelisted.
+However, by using the plugin and shortcode, the height of the iframe will automatically be adjusted to fit the content.
 
 ## Use htaccess
 
