@@ -25,7 +25,7 @@ add_action( 'init', 'ruigehond015_run' );
 add_action( "activate_$ruigehond015_basename", 'ruigehond015_activate' );
 add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
 /* this is for the parent website: */
-add_shortcode( 'ruigehond015-embed', 'ruigehond015_shortcode' );
+add_shortcode( 'ruigehond-embed', 'ruigehond015_shortcode' );
 function ruigehond015_shortcode( $attributes = [], $content = null, $short_code = 'ruigehond-embed' ): string {
 	if ( false === isset( $attributes['src'] ) ) {
 		return esc_html__( 'Attribute src missing', 'ruigehond-embed' );
@@ -142,7 +142,7 @@ function ruigehond015_settingspage(): void {
 	echo '<br/>';
 	$str = __( 'On the site where you want to embed a page, you can use the shortcode %s to embed an url, if you have installed this plugin.', 'ruigehond-embed' );
 	if ( 1 === substr_count( $str, '%s' ) ) {
-		echo esc_html( sprintf( $str, '[ruigehond-embed-parent src="&lt;Iframe src&gt;"]' ) );
+		echo esc_html( sprintf( $str, '[ruigehond-embed src="&lt;Iframe src&gt;"]' ) );
 		echo ' ', esc_html__( 'You do not need to specify an exception there.', 'ruigehond-embed' );
 	}
 	echo '</p><form action="options.php" method="post" id="ruigehond015-settings-form">';
