@@ -417,7 +417,8 @@ function ruigehond015_process_htaccess( array $vars ): array {
 	echo 'RewriteRule ^ - [E=RUIGEHOND015_REQUEST:%1%2]', PHP_EOL; // store original request uri in env variable
 	// spill the rules
 	foreach ( $vars['titles'] as $title => $embed ) {
-		echo '# process key ', esc_html( sanitize_title( $title ) ), PHP_EOL;
+		$safe_title = esc_html( sanitize_title( $title ) );
+		echo '# process key ', $safe_title, PHP_EOL;
 		$redirect = $embed;
 		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
@@ -426,7 +427,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		// escaping % because they denote backreference in this context in the htaccess
 		$safe_url = str_replace( '%', '\%', ruigehond015_get_safe_url( $redirect ) );
 		// NE for no escaping (url is already escaped)
-		echo 'RewriteRule ^ruigehond_embed/', esc_html( sanitize_title( $title ) ), '$ ', esc_html( $safe_url ), ' [NE,QSD,R=301,L]', PHP_EOL;
+		echo 'RewriteRule ^ruigehond_embed/', $safe_title, '$ ', $safe_url, ' [NE,QSD,R=301,L]', PHP_EOL;
 		// allow embedding from the following referrers:
 		$keyed = ruigehond015_get_key_for_embed( $embed );
 		if ( false === isset( $vars['embeds'][ $keyed ] ) || false === is_array( $vars['embeds'][ $keyed ] ) ) {
@@ -439,9 +440,9 @@ function ruigehond015_process_htaccess( array $vars ): array {
 		$wwwtoo = true === $vars['wwwtoo'];
 		foreach ( $vars['embeds'][ $keyed ] as $index => $referrer ) {
 			$safe_url = ruigehond015_get_safe_url( $referrer );
-			echo 'RewriteCond %{HTTP_REFERER} ^', esc_html( $safe_url ), '.*';
+			echo 'RewriteCond %{HTTP_REFERER} ^', $safe_url, '.*';
 			if ( $wwwtoo ) { // add [OR] + www.-version if set that it should
-				echo ' [OR]', PHP_EOL, 'RewriteCond %{HTTP_REFERER} ^', str_replace( '://', '://www.', esc_html( $safe_url ) ), '.*';
+				echo ' [OR]', PHP_EOL, 'RewriteCond %{HTTP_REFERER} ^', str_replace( '://', '://www.', $safe_url ), '.*';
 			}
 			if ( $index < $highest ) {
 				echo ' [OR]'; // any of the referrers is ok, separate them by OR
@@ -458,7 +459,7 @@ function ruigehond015_process_htaccess( array $vars ): array {
 				// url's end in forward slash normally
 				$keyed = "$keyed/";
 			}
-			echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', esc_html( $keyed ), PHP_EOL; // default AND will be used
+			echo 'RewriteCond %{ENV:RUIGEHOND015_REQUEST} ', $keyed, PHP_EOL; // default AND will be used
 		}
 		echo 'RewriteRule (^.*$) - [E=RUIGEHOND015_REFERER:%{HTTP_REFERER}]', PHP_EOL; // store in env variable
 	}
