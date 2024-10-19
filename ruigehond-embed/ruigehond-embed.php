@@ -87,7 +87,7 @@ function ruigehond015_run(): void {
 		) {
 			$redirect = "/$redirect";
 		}
-		wp_redirect( $redirect, 307, 'Ruigehond-embed' );
+		wp_redirect( $redirect, 301, 'Ruigehond-embed' );
 		die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
 	} elseif ( true === isset( $vars['embeds'][ $url ] )
 	           && true === isset( $_SERVER['HTTP_REFERER'] )
