@@ -28,12 +28,12 @@ add_action( "deactivate_$ruigehond015_basename", 'ruigehond015_deactivate' );
 add_shortcode( 'ruigehond-embed', 'ruigehond015_shortcode' );
 function ruigehond015_shortcode( $attributes = [], $content = null, $short_code = 'ruigehond-embed' ): string {
 	if ( false === isset( $attributes['src'] ) ) {
-		return esc_html__( 'Attribute src missing', 'ruigehond-embed' );
+		return 'Ruigehond embed: src attribute is missing.';
 	}
 	$src = $attributes['src'];
 	$url = wp_parse_url( $src );
 	if ( ! isset( $url['scheme'] ) || ! in_array( $url['scheme'], array( 'http', 'https' ) ) ) {
-		return "Ruigehond embed: src not recognized as a valid iframe src. Use a fully qualified url.";
+		return 'Ruigehond embed: src not recognized as a valid iframe src. Use a fully qualified url.';
 	}
 	wp_enqueue_script( 'ruigehond015_snuggle_javascript', plugin_dir_url( __FILE__ ) . 'snuggle.js', [], RUIGEHOND015_VERSION );
 
@@ -42,16 +42,6 @@ function ruigehond015_shortcode( $attributes = [], $content = null, $short_code 
 
 //
 function ruigehond015_run(): void {
-	wp_enqueue_script( 'ruigehond015_unframe_javascript', plugin_dir_url( __FILE__ ) . 'unframe.js', [], RUIGEHOND015_VERSION );
-
-	$vars = get_option( 'ruigehond015' );
-
-	if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
-		header( 'X-Frame-Options: DENY' );
-	} else {
-		header( 'X-Frame-Options: SAMEORIGIN' );
-	}
-
 	if ( is_admin() ) {
 		load_plugin_textdomain( 'ruigehond-embed', '', dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		add_action( 'admin_init', 'ruigehond015_settings' );
@@ -59,6 +49,18 @@ function ruigehond015_run(): void {
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ruigehond015_settingslink' ); // settings link on plugins page
 
 		return;
+	}
+
+	wp_enqueue_script( 'ruigehond015_unframe_javascript', plugin_dir_url( __FILE__ ) . 'unframe.js', [], RUIGEHOND015_VERSION );
+
+	if (getenv('RUIGEHOND015_REQUEST')) return; // processing already done in htaccess
+
+	$vars = get_option( 'ruigehond015' );
+
+	if ( isset( $vars['xframe'] ) && 'DENY' === $vars['xframe'] ) {
+		header( 'X-Frame-Options: DENY' );
+	} else {
+		header( 'X-Frame-Options: SAMEORIGIN' );
 	}
 
 	if ( false === isset( $vars['titles'] ) ) {
@@ -78,12 +80,12 @@ function ruigehond015_run(): void {
 		$redirect = $vars['titles'][ $url ];
 		if ( false === strpos( $redirect, '?' ) && false === strpos( $redirect, '#' ) ) {
 			$redirect = "$redirect/"; // avoid prevent the extra 301 redirect from WordPress
-			if ( 0 !== strpos( $redirect, 'http://' )
-			     && 0 !== strpos( $redirect, 'https://' )
-			     && 0 !== strpos( $redirect, '//' )
-			) {
-				$redirect = "/$redirect";
-			}
+		}
+		if ( 0 !== strpos( $redirect, 'http://' )
+		     && 0 !== strpos( $redirect, 'https://' )
+		     && 0 !== strpos( $redirect, '//' )
+		) {
+			$redirect = "../$redirect"; // skip over the ruigehond_embed part in url
 		}
 		wp_redirect( $redirect, 307, 'Ruigehond-embed' );
 		die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
@@ -321,13 +323,15 @@ function ruigehond015_settings_validate( $input ): array {
 			if ( false !== strpos( $embed, '#' ) ) {
 				$embed = explode( '#', $embed )[0];
 			}
+			//
+			$embed = ruigehond015_get_safe_url( $embed ); // joeri
 			$keyed = ruigehond015_get_key_for_embed( $embed );
 
 			if ( in_array( $title, $titles_had ) ) {
 				$old_title = $title;
 				$title     = random_int( 0, 9 ) . "_$title";
 				while ( in_array( $title, $titles_had ) ) {
-					random_int( 0, 9 ) . $title;
+					$title = random_int( 0, 9 ) . $title;
 				}
 				add_settings_error(
 					'ruigehond_embed',
