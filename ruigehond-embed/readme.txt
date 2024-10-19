@@ -5,7 +5,7 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hallo
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv3
 
 Prevent your site from being embedded. Select specific urls that may be embedded from specific origins.
@@ -71,5 +71,7 @@ Install the plugin by clicking ‘Install now’ below, or the ‘Download’ bu
 1. Setting screen with one embed entry consisting of the title, the (local) url to embed and a list of authorized embedders (only 1).
 
 == Changelog ==
+
+1.4.1: restore query string processing in htaccess and short circuit unnecessary php processing
 
 1.4.0: release into the wild
