@@ -85,7 +85,7 @@ function ruigehond015_run(): void {
 		     && 0 !== strpos( $redirect, 'https://' )
 		     && 0 !== strpos( $redirect, '//' )
 		) {
-			$redirect = "../$redirect"; // skip over the ruigehond_embed part in url
+			$redirect = "/$redirect";
 		}
 		wp_redirect( $redirect, 307, 'Ruigehond-embed' );
 		die(); // Necessary for otherwise sometimes a 404 is served. Also, wp_die does not work here.
