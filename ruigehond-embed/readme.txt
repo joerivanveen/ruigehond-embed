@@ -34,7 +34,9 @@ Add urls that may embed this, aka referrers, (e.g. `https://my-satellite.site`) 
 Install the plugin on your satellite site. This has the added benefit of locking down that site as well.
 
 Use the simple shortcode on that site to generate an iframe with the embedded content:
-`[ruigehond-embed src="https://my-main.site/ruigehond_embed/general-contact-form"]`
+```
+[ruigehond-embed src="https://my-main.site/ruigehond_embed/general-contact-form"]
+```
 
 Watch the form magically and safely be embedded. Other sites will continue to not be able to embed your content.
 
