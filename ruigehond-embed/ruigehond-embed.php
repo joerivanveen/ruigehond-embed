@@ -43,6 +43,7 @@ function ruigehond015_shortcode( $attributes = [], $content = null, $short_code 
 //
 function ruigehond015_run(): void {
 	if ( is_admin() ) {
+		load_plugin_textdomain( 'ruigehond-embed', '', dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		add_action( 'admin_init', 'ruigehond015_settings' );
 		add_action( 'admin_menu', 'ruigehond015_menuitem' );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ruigehond015_settingslink' ); // settings link on plugins page
