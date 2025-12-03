@@ -4,9 +4,9 @@ declare( strict_types=1 );
 Plugin Name: Ruigehond embed
 Plugin URI: https://github.com/joerivanveen/ruigehond-embed
 Description: Embed selected urls from your website elsewhere
-Version: 1.4.1
-Requires at least: 5.0
-Tested up to: 6.8
+Version: 1.4.2
+Requires at least: 6.0
+Tested up to: 6.9
 Requires PHP: 7.4
 Author: Joeri van Veen
 Author URI: https://wp-developer.eu
@@ -18,7 +18,7 @@ Domain Path: /languages/
 // TODO maybe add csp functionality to php as well
 defined( 'ABSPATH' ) || die();
 // This is plugin nr. 15 by Ruige hond. It identifies as: ruigehond015.
-const RUIGEHOND015_VERSION = '1.4.1';
+const RUIGEHOND015_VERSION = '1.4.2';
 $ruigehond015_basename = plugin_basename( __FILE__ );
 // Startup the plugin
 add_action( 'init', 'ruigehond015_run' );
